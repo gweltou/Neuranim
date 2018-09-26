@@ -11,35 +11,33 @@ class nnContactListener(contactListener):
     def __init__(self):
         contactListener.__init__(self)
         self.sensors = dict()
-        """
-        self.sensors = {"lsensor": False,
-                        "rsensor": False,
-                        "lbsensor": False,
-                        "rbsensor": False,
-                        }
-        """
     
     def BeginContact(self, contact):
         f1, f2 = contact.fixtureA, contact.fixtureB
         if "ground" in (f1.userData, f2.userData):
-            for sensor in self.sensors.keys():
-                if sensor in (f1.userData, f2.userData):
-                    self.sensors[sensor] = True
+            if isinstance(f1.userData, tuple):	# This fixture is an Animatronic sensor
+                self.sensors[f1.userData[0]][f1.userData[1]] = 1.0
+            if isinstance(f2.userData, tuple):	# This fixture is an Animatronic sensor
+                self.sensors[f2.userData[0]][f2.userData[1]] = 1.0
     
     def EndContact(self, contact):
         f1, f2 = contact.fixtureA, contact.fixtureB
         if "ground" in (f1.userData, f2.userData):
-            for sensor in self.sensors.keys():
-                if sensor in (f1.userData, f2.userData):
-                    self.sensors[sensor] = False
+            if isinstance(f1.userData, tuple):	# This fixture is an Animatronic sensor
+                self.sensors[f1.userData[0]][f1.userData[1]] = 0.0
+            if isinstance(f2.userData, tuple):	# This fixture is an Animatronic sensor
+                self.sensors[f2.userData[0]][f2.userData[1]] = 0.0
     
-    def registerSensors(self, sensors):
-        for s in sensors:
-            self.sensors[s] = False
+    def registerSensors(self, id, n):
+        """
+            Args:
+                id: Animatronic unique identifier
+                n: number of sensor to register
+        """
+        self.sensors[id] = [0.0]*n
     
-    def unregisterSensors(self, sensors):
-        for s in sensors:
-            del self.sensors[s]
+    def unregisterSensors(self, id):
+        del self.sensors[id]
 
 
 def breed(creatures):
@@ -176,21 +174,27 @@ class Animatronic(object):
         self.target = vec2(TARGET)
         self.nn = NeuralNetwork(layers)
         self.keeper = False
-        self.sensors = []	# List of sensors names (used to register in Box2D contactListener)
         self.bodies = []	# List of Box2D Body type, parts of the Animatronic
+        self.id = "Animatronic"
     
     def init_body(self):
+        """
+            Order of defining bodies, joints and sensors is important
+            self.bodies and self.joints must be symetrical so it can be reversed for mirror mode
+            
+            Sensors (x):
+                      (0)-----x-----(1) [[[ BODY ]]] (2)-----x-----(4)
+        """
+        
         self.body = self.world.CreateDynamicBody(position=self.position)
         self.body.CreatePolygonFixture(box=(0.5, 0.5), density=1, friction=0.3)
         # Ground/Body sensors
         self.body.CreateCircleFixture(pos=(-0.5, 0.5), radius=0.15,
                                        density=0,
-                                       isSensor=True, userData = "lbsensor")
+                                       isSensor=True, userData = (self.id, 1))
         self.body.CreateCircleFixture(pos=(0.5, 0.5), radius=0.15,
                                        density=0,
-                                       isSensor=True, userData = "rbsensor")
-        self.sensors.extend(["lbsensor", "rbsensor"])
-        self.sensors.extend([""]) # New morphology
+                                       isSensor=True, userData = (self.id, 2))
         self.bodies.append(self.body)
         
         # Legs
@@ -212,7 +216,7 @@ class Animatronic(object):
         ## Ground/Foot sensor
         self.lfoot.CreateCircleFixture(pos=(-0.36, 0), radius=0.15,
                                        density=1, friction=1.0, restitution=0.0,
-                                       userData = "lsensor", groupIndex=-1)
+                                       userData = (self.id, 0), groupIndex=-1)
         
         self.rfoot = self.world.CreateDynamicBody(position=self.position)
         fixture = self.rfoot.CreatePolygonFixture(box=(0.36, 0.08), density=1, friction=0.3)
@@ -221,10 +225,11 @@ class Animatronic(object):
         ## Ground/Foot sensor
         self.rfoot.CreateCircleFixture(pos=(0.36, 0), radius=0.15,
                                        density=1, friction=1.0, restitution=0.0,
-                                       userData = "rsensor", groupIndex=-1)
-        self.sensors.extend(["lsensor", "rsensor"])
+                                       userData = (self.id, 3), groupIndex=-1)
         self.bodies.append(self.lfoot)
         self.bodies.append(self.rfoot)
+        
+        self.n_sensors = 4
         
         self.joints = []
         self.joints.append(
@@ -279,21 +284,23 @@ class Animatronic(object):
     def set_target(self, pos):
         self.target = vec2(pos)
     
-    def update(self, dict_sensors, mirror=False):
+    def update(self, list_sensors, mirror=False):
+        print list_sensors
         dpos = self.target - self.body.position
         #dpos = self.target
         if dpos.length > 1:
             dpos.Normalize()
         joint_angles = [(j.angle%(2*pi))/pi - 1 for j in self.joints]
-        # Make the limbs angle symmetric
-        joint_angles[2] = -joint_angles[2]
-        joint_angles[3] = -joint_angles[3] 
+        # Make the limbs angle list symmetric (second half *= -1)
+        for i in range(len(joint_angles)//2 + len(joint_angles)%2, len(joint_angles)):
+            joint_angles[i] *= -1
+        print(joint_angles) ###
         
-        to_nn = [dpos.x, dpos.y] + joint_angles + [int(dict_sensors["lsensor"]), int(dict_sensors["rsensor"])]
+        to_nn = [dpos.x, dpos.y] + joint_angles + list_sensors
         if dpos.x < 0 or mirror:
             # Mirror mode
             joint_angles = joint_angles[::-1]
-            to_nn = [abs(dpos.x), dpos.y] + joint_angles + [int(dict_sensors["rsensor"]), int(dict_sensors["lsensor"])]
+            to_nn = [-dpos.x, dpos.y] + joint_angles + list_sensors[::-1]
         
         self.nn.feedforward(to_nn)
         if dpos.x < 0 or mirror:

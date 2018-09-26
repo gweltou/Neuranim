@@ -96,13 +96,11 @@ podium = []
 creature = pool.pop()
 creature.set_target(target)
 creature.init_body()
-world.contactListener.registerSensors(creature.sensors)
+world.contactListener.registerSensors(creature.id, creature.n_sensors)
 score_min = 100
 
 while running:
-    #lsensor = world.contactListener.sensors["lsensor"]
-    #rsensor = world.contactListener.sensors["rsensor"]
-    creature.update(world.contactListener.sensors, mirror)
+    creature.update(world.contactListener.sensors[creature.id], mirror)
     if SCORE_MIN:
         score_min = min(score_min, (creature.target - creature.body.position).length)
     

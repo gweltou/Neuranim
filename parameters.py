@@ -7,7 +7,7 @@ if PRESENTATION:
     DISPLAY = True
     BREED = False
 
-START_GEN = 160
+START_GEN = 0
 END_GEN = 350
 STARTING_POPULATION = 400
 WINNERS_PER_GENERATION = 15
@@ -19,4 +19,4 @@ TARGETS = [(-12, 2), (40, 2)]    # Run
 #TARGETS = [(16.5, 4), (16.5, 4)]	# Jump
 SCORE_MIN = False
 
-NEURON_LAYERS = [8, 16, 16, 4] # including input and output layers
+NEURON_LAYERS = [10, 16, 16, 4] # including input and output layers
