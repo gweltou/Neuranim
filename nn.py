@@ -177,6 +177,7 @@ class Animatronic(object):
         self.nn = NeuralNetwork(layers)
         self.keeper = False
         self.sensors = []	# List of sensors names (used to register in Box2D contactListener)
+        self.bodies = []	# List of Box2D Body type, parts of the Animatronic
     
     def init_body(self):
         self.body = self.world.CreateDynamicBody(position=self.position)
@@ -190,22 +191,25 @@ class Animatronic(object):
                                        isSensor=True, userData = "rbsensor")
         self.sensors.extend(["lbsensor", "rbsensor"])
         self.sensors.extend([""]) # New morphology
+        self.bodies.append(self.body)
         
         # Legs
         self.lleg = self.world.CreateDynamicBody(position=self.position)
         fixture = self.lleg.CreatePolygonFixture(box=(0.3, 0.15), density=1, friction=0.3)
         fixture.filterData.groupIndex = -1
+        self.bodies.append(self.lleg)
         
         self.rleg = self.world.CreateDynamicBody(position=self.position)
         fixture = self.rleg.CreatePolygonFixture(box=(0.3, 0.15), density=1, friction=0.3)
         fixture.filterData.groupIndex = -1
+        self.bodies.append(self.rleg)
         
         # Feet
         self.lfoot = self.world.CreateDynamicBody(position=self.position)
         fixture = self.lfoot.CreatePolygonFixture(box=(0.36, 0.08), density=1, friction=0.3)
         fixture.filterData.groupIndex = -1
         
-        # Ground/Foot sensor
+        ## Ground/Foot sensor
         self.lfoot.CreateCircleFixture(pos=(-0.36, 0), radius=0.15,
                                        density=1, friction=1.0, restitution=0.0,
                                        userData = "lsensor", groupIndex=-1)
@@ -214,11 +218,13 @@ class Animatronic(object):
         fixture = self.rfoot.CreatePolygonFixture(box=(0.36, 0.08), density=1, friction=0.3)
         fixture.filterData.groupIndex = -1
         
-        # Ground/Foot sensor
+        ## Ground/Foot sensor
         self.rfoot.CreateCircleFixture(pos=(0.36, 0), radius=0.15,
                                        density=1, friction=1.0, restitution=0.0,
                                        userData = "rsensor", groupIndex=-1)
         self.sensors.extend(["lsensor", "rsensor"])
+        self.bodies.append(self.lfoot)
+        self.bodies.append(self.rfoot)
         
         self.joints = []
         self.joints.append(
@@ -327,5 +333,5 @@ class Animatronic(object):
     def destroy_body(self):
         for joint in self.joints:
             self.world.DestroyJoint(joint)
-        for body in (self.body, self.lleg, self.rleg, self.lfoot, self.rfoot):
+        for body in self.bodies:
             self.world.DestroyBody(body)

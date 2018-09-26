@@ -8,7 +8,7 @@ import pygame
 import random
 import numpy as np
 from pygame.locals import (QUIT, KEYDOWN, K_ESCAPE, K_k, K_m)
-from nn2 import *
+from nn import *
 
 import Box2D  # The main library
 # Box2D.b2 maps Box2D.b2Vec2 to vec2 (and so on)
