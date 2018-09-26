@@ -29,12 +29,12 @@ def world_to_px(pos):
 # --- pygame setup ---
 if DISPLAY:
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
-    pygame.display.set_caption('Simple pygame example')
+    pygame.display.set_caption('Neuranim Mutate')
     clock = pygame.time.Clock()
 world = world(contactListener=nnContactListener(), gravity=(0, -10), doSleep=True)
 
 
-# And a static body to hold the ground shape
+# A static body to hold the ground shape
 ground_body = world.CreateStaticBody(
     shapes=polygonShape(box=(20, 0.1)),
     position=(15, 0.4),
@@ -96,12 +96,13 @@ podium = []
 creature = pool.pop()
 creature.set_target(target)
 creature.init_body()
+world.contactListener.registerSensors(creature.sensors)
 score_min = 100
 
 while running:
-    lsensor = world.contactListener.sensors["lsensor"]
-    rsensor = world.contactListener.sensors["rsensor"]
-    creature.update(lsensor, rsensor, mirror)
+    #lsensor = world.contactListener.sensors["lsensor"]
+    #rsensor = world.contactListener.sensors["rsensor"]
+    creature.update(world.contactListener.sensors, mirror)
     if SCORE_MIN:
         score_min = min(score_min, (creature.target - creature.body.position).length)
     
