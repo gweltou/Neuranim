@@ -1,5 +1,5 @@
 PRESENTATION = False	# Without display
-PRESENTATION = True	# With display ON
+#PRESENTATION = True	# With display ON
 
 DISPLAY = False
 BREED = True

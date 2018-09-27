@@ -285,7 +285,6 @@ class Animatronic(object):
         self.target = vec2(pos)
     
     def update(self, list_sensors, mirror=False):
-        print list_sensors
         dpos = self.target - self.body.position
         #dpos = self.target
         if dpos.length > 1:
@@ -294,7 +293,6 @@ class Animatronic(object):
         # Make the limbs angle list symmetric (second half *= -1)
         for i in range(len(joint_angles)//2 + len(joint_angles)%2, len(joint_angles)):
             joint_angles[i] *= -1
-        print(joint_angles) ###
         
         to_nn = [dpos.x, dpos.y] + joint_angles + list_sensors
         if dpos.x < 0 or mirror:

@@ -55,8 +55,9 @@ def draw_creature(screen, creature):
                 pygame.draw.polygon(screen, (200, 200, 200, 255), vertices)
             if shape.type == 0: # Circle shape
                 color = (255, 255, 255, 255)
-                if fixture.userData in ("lsensor", "rsensor") and \
-                    world.contactListener.sensors[fixture.userData] == True:
+                # Check if it is a sensor
+                if isinstance(fixture.userData, tuple) and \
+                    world.contactListener.sensors[fixture.userData[0]][fixture.userData[1]] == True:
                     color = (0, 255, 0, 255)
                 pygame.draw.circle(screen, color,
                                    world_to_px(body.transform *shape.pos),
