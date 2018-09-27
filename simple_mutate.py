@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 
 
+import sys
+sys.settrace
+
 from heapq import heappush, heappop
 import datetime
 import pygame
@@ -10,7 +13,6 @@ import numpy as np
 from pygame.locals import (QUIT, KEYDOWN, K_ESCAPE, K_k, K_m)
 from nn import *
 
-import Box2D  # The main library
 # Box2D.b2 maps Box2D.b2Vec2 to vec2 (and so on)
 from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, pi, vec2)
 from parameters import *
@@ -104,6 +106,7 @@ while running:
     if SCORE_MIN:
         score_min = min(score_min, (creature.target - creature.body.position).length)
     
+    
     if DISPLAY:
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
@@ -127,7 +130,7 @@ while running:
                 vertices = [(v[0], SCREEN_HEIGHT - v[1]) for v in vertices]
     
                 pygame.draw.polygon(screen, (255, 255, 255, 255), vertices)
-    
+        
         pygame.draw.circle(screen, (255,0,0,255), world_to_px(target), 5)
         draw_creature(screen, creature)
         pygame.display.flip()

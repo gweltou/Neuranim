@@ -174,20 +174,22 @@ class Animatronic(object):
         self.target = vec2(TARGET)
         self.nn = NeuralNetwork(layers)
         self.keeper = False
-        self.bodies = []	# List of Box2D Body type, parts of the Animatronic
         self.id = "Animatronic"
     
     def init_body(self):
         """
             Order of defining bodies, joints and sensors is important
-            self.bodies and self.joints must be symetrical so it can be reversed for mirror mode
+            self.joints must be symetrical so it can be reversed for mirror mode
             
-            Sensors (x):
+            Sensors number (x):
                       (0)-----x-----(1) [[[ BODY ]]] (2)-----x-----(4)
         """
         
+        self.bodies = []
+        
         self.body = self.world.CreateDynamicBody(position=self.position)
-        self.body.CreatePolygonFixture(box=(0.5, 0.5), density=1, friction=0.3)
+        self.body.CreatePolygonFixture(box=(0.5, 0.5), density=1, friction=0.3,
+                                       userData = "body_trunc")
         # Ground/Body sensors
         self.body.CreateCircleFixture(pos=(-0.5, 0.5), radius=0.15,
                                        density=0,
@@ -199,7 +201,8 @@ class Animatronic(object):
         
         # Legs
         self.lleg = self.world.CreateDynamicBody(position=self.position)
-        fixture = self.lleg.CreatePolygonFixture(box=(0.3, 0.15), density=1, friction=0.3)
+        fixture = self.lleg.CreatePolygonFixture(box=(0.3, 0.15), density=1, friction=0.3,
+                                                 userData = "lleg")
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.lleg)
         
@@ -210,7 +213,8 @@ class Animatronic(object):
         
         # Feet
         self.lfoot = self.world.CreateDynamicBody(position=self.position)
-        fixture = self.lfoot.CreatePolygonFixture(box=(0.36, 0.08), density=1, friction=0.3)
+        fixture = self.lfoot.CreatePolygonFixture(box=(0.36, 0.08), density=1, friction=0.3,
+                                                  userData = "lfoot")
         fixture.filterData.groupIndex = -1
         
         ## Ground/Foot sensor
@@ -219,7 +223,8 @@ class Animatronic(object):
                                        userData = (self.id, 0), groupIndex=-1)
         
         self.rfoot = self.world.CreateDynamicBody(position=self.position)
-        fixture = self.rfoot.CreatePolygonFixture(box=(0.36, 0.08), density=1, friction=0.3)
+        fixture = self.rfoot.CreatePolygonFixture(box=(0.36, 0.08), density=1, friction=0.3,
+                                                  userData = "rfoot")
         fixture.filterData.groupIndex = -1
         
         ## Ground/Foot sensor
