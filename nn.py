@@ -230,6 +230,7 @@ class Animatronic(object):
         self.bodies.append(self.rfoot)
         
         self.n_sensors = 4
+        self.world.contactListener.registerSensors(self.id, self.n_sensors)
         
         self.joints = []
         self.joints.append(
@@ -340,3 +341,4 @@ class Animatronic(object):
             self.world.DestroyJoint(joint)
         for body in self.bodies:
             self.world.DestroyBody(body)
+        self.world.contactListener.unregisterSensors(self.id)

@@ -97,7 +97,6 @@ podium = []
 creature = pool.pop()
 creature.set_target(target)
 creature.init_body()
-world.contactListener.registerSensors(creature.id, creature.n_sensors)
 score_min = 100
 
 while running:
