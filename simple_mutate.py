@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-import sys
-sys.settrace
-
 from heapq import heappush, heappop
 import datetime
 import pygame
@@ -25,8 +22,13 @@ SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
 
 
 def world_to_px(pos):
+    """ Reverse height coordinates (up is positive in Box2D) """
     return int(pos.x*PPM), int(SCREEN_HEIGHT - pos.y*PPM)
 
+def to_camera(pos, cam):
+    """ Translate absolute position (in px) to camera position """
+    print(pos, cam)
+    return cam-pos
 
 # --- pygame setup ---
 if DISPLAY:
@@ -52,8 +54,8 @@ def draw_creature(screen, creature):
         for fixture in body.fixtures:
             shape = fixture.shape
             if shape.type == 2:  # Polygon shape
-                vertices = [(body.transform * v) * PPM for v in shape.vertices]
-                vertices = [(v[0], SCREEN_HEIGHT - v[1]) for v in vertices]
+                # Convert vertices local coord to absolute px coord
+                vertices = [world_to_px(body.transform * v) for v in shape.vertices]
                 pygame.draw.polygon(screen, (200, 200, 200, 255), vertices)
             if shape.type == 0: # Circle shape
                 color = (255, 255, 255, 255)
@@ -62,8 +64,8 @@ def draw_creature(screen, creature):
                     world.contactListener.sensors[fixture.userData[0]][fixture.userData[1]] == True:
                     color = (0, 255, 0, 255)
                 pygame.draw.circle(screen, color,
-                                   world_to_px(body.transform *shape.pos),
-                                   int(shape.radius*PPM))
+                                   world_to_px(body.transform * shape.pos),
+                                   int(shape.radius * PPM))
 
 
 # --- main game loop ---
