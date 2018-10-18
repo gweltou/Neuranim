@@ -25,16 +25,24 @@ class Camera:
                 vertices = [self.cam.world_to_px(-self.cam.center+(fixture.body.transform * v)) for v in shape.vertices]
                 pygame.draw.polygon(self.screen, (200, 200, 200, 255), vertices)
             if shape.type == 0: # Circle shape
-                color = (255, 255, 255, 255)
+                color = (200, 200, 200, 255)
                 # Check if it is a sensor
-                if isinstance(fixture.userData, tuple) and \
-                    self.cam.world.contactListener.sensors[fixture.userData[0]][fixture.userData[1]] == True:
-                    color = (0, 255, 0, 255)
+                if isinstance(fixture.userData, tuple):
+                    color = (255, 255, 255, 255)
+                    if self.cam.world.contactListener.sensors[fixture.userData[0]][fixture.userData[1]] == True:
+                        color = (0, 255, 0, 255)
                 # TODO: replace with pygame.draw.ellipse()
                 pygame.draw.circle(self.screen, color,
                                    self.cam.world_to_px(-self.cam.center+(fixture.body.transform * shape.pos)),
                                    int(shape.radius * self.cam.HPPM))
-            
+            if shape.type == 1 and fixture.userData == 'ground':
+                #Ground line
+                p0 = self.cam.world_to_px(-self.cam.center+shape.vertices[0])
+                p1 = self.cam.world_to_px(-self.cam.center+shape.vertices[1])
+                p0 = (max(0, p0[0]), p0[1])
+                p1 = (min(p1[0], self.cam.SW), p1[1])
+                pygame.draw.rect(self.screen, (100, 100, 100, 10), (p0[0], p0[1], p1[0]-p0[0], self.cam.SH-p0[1]))
+                
             # Continue the query by returning True
             return True
     
@@ -55,7 +63,7 @@ class Camera:
     
     def world_to_px(self, pos):
         """ Reverse height coordinates (up is positive in Box2D) """
-        return int(pos.x*self.HPPM)+self.SW//2, int(self.SH//2 - pos.y*self.VPPM)
+        return int(pos[0]*self.HPPM)+self.SW//2, int(self.SH//2 - pos[1]*self.VPPM)
     
     def set_center(self, pos):
         self.center = pos
@@ -78,5 +86,6 @@ class Camera:
             self.set_target(self.body_to_follow.position)
             self.aabb = AABB(lowerBound=self.center-(self.width/2, self.height/2),
                          upperBound=self.center+(self.width/2, self.height/2))
-                         
+        
+        self.screen.fill((0, 0, 0, 0))
         self.world.QueryAABB(self.callback, self.aabb)

@@ -9,10 +9,11 @@ import random
 import numpy as np
 from pygame.locals import (QUIT, KEYDOWN, K_ESCAPE, K_LEFT, K_RIGHT, K_UP, K_DOWN, K_k, K_m)
 from nn import *
+from boulotron import Boulotron2000, import_creatures
 from camera import Camera
 
 # Box2D.b2 maps Box2D.b2Vec2 to vec2 (and so on)
-from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, pi, vec2, queryCallback, AABB)
+from Box2D.b2 import (world, polygonShape, edgeShape, staticBody, dynamicBody, pi, vec2, queryCallback, AABB)
 from parameters import *
 
 
@@ -32,18 +33,15 @@ if DISPLAY:
 
 
 # A static body to hold the ground shape
-ground_body = world.CreateStaticBody(
-    shapes=polygonShape(box=(20, 0.1)),
-    position=(15, 0.4),
-)
-ground_body.fixtures[0].userData = "ground"
-ground_body.fixtures[0].friction = 1.0
+ground = world.CreateStaticBody()
+ground_fix = ground.CreateEdgeFixture(vertices=[(-10,0), (40,0)], friction=1.0, userData='ground')
+
 
 
 time0 = datetime.time()
 running = True
 generation = START_GEN
-target = vec2(random.choice(TARGETS))
+target = TARGET #vec2(random.choice(TARGETS))
 steps = 0
 mirror = False
 pool = []
@@ -66,7 +64,8 @@ if generation > 0:
         pool.extend(offspring)
 
 else:
-    pool = [Animatronic(world, position=STARTPOS) for i in range(STARTING_POPULATION)]
+    #pool = [Animatronic(world, position=STARTPOS) for i in range(STARTING_POPULATION)]
+    pool = [Boulotron2000(world, position=STARTPOS) for i in range(STARTING_POPULATION)]
 
 podium = []
 creature = pool.pop()
@@ -107,7 +106,7 @@ while running:
     
     world.Step(TIME_STEP, 6, 2)
     steps += 1
-    if steps >= MAX_STEPS or not creature.body.awake or creature.body.position.y<1:
+    if steps >= MAX_STEPS or not creature.body.awake or creature.body.position.y<0:
         steps = 0
         score = (creature.target - creature.body.position).length
         if SCORE_MIN:
@@ -149,7 +148,7 @@ while running:
             print("generation score: {}".format(gen_score))
             print("New pool of {} creatures".format(len(pool)))
             creature = pool.pop()
-            target = vec2(random.choice(TARGETS))
+            target = TARGET # vec2(random.choice(TARGETS))
             creature.set_target(target)
             creature.init_body()
             score_min = 100

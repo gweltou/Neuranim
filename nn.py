@@ -178,11 +178,12 @@ class Animatronic(object):
     
     def init_body(self):
         """
-            Order of defining bodies, joints and sensors is important
+            Order of defining joints and sensors is important
             self.joints must be symetrical so it can be reversed for mirror mode
             
-            Sensors number (x):
-                      (0)-----x-----(1) [[[ BODY ]]] (2)-----x-----(4)
+            Sensors number (n):
+                      (0)-----x-----(1) [[[ BODY ]]] (2)-----x-----(3)
+            
         """
         
         self.bodies = []
@@ -329,7 +330,7 @@ class Animatronic(object):
         return child
     
     def copy(self):
-        duplicate = Animatronic(self.world, self.position)
+        duplicate = self.__class__(self.world, self.position)
         nn = self.nn.copy()
         duplicate.nn = nn
         return duplicate
