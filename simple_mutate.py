@@ -1,41 +1,34 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
+from __future__ import division
 from heapq import heappush, heappop
 import datetime
 import pygame
 import random
 import numpy as np
-from pygame.locals import (QUIT, KEYDOWN, K_ESCAPE, K_k, K_m)
+from pygame.locals import (QUIT, KEYDOWN, K_ESCAPE, K_LEFT, K_RIGHT, K_UP, K_DOWN, K_k, K_m)
 from nn import *
+from camera import Camera
 
 # Box2D.b2 maps Box2D.b2Vec2 to vec2 (and so on)
-from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, pi, vec2)
+from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, pi, vec2, queryCallback, AABB)
 from parameters import *
 
 
-PPM = 20.0  # pixels per meter
+
 TARGET_FPS = 60
 TIME_STEP = 1.0 / TARGET_FPS
 SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
 
 
-def world_to_px(pos):
-    """ Reverse height coordinates (up is positive in Box2D) """
-    return int(pos.x*PPM), int(SCREEN_HEIGHT - pos.y*PPM)
-
-def to_camera(pos, cam):
-    """ Translate absolute position (in px) to camera position """
-    print(pos, cam)
-    return cam-pos
-
-# --- pygame setup ---
+world = world(contactListener=nnContactListener(), gravity=(0, -10), doSleep=True)
 if DISPLAY:
+    # --- pygame setup ---
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
     pygame.display.set_caption('Neuranim Mutate')
     clock = pygame.time.Clock()
-world = world(contactListener=nnContactListener(), gravity=(0, -10), doSleep=True)
+    camera = Camera(world, screen, 18.0, 18.0*SCREEN_HEIGHT/SCREEN_WIDTH)
 
 
 # A static body to hold the ground shape
@@ -47,28 +40,6 @@ ground_body.fixtures[0].userData = "ground"
 ground_body.fixtures[0].friction = 1.0
 
 
-
-def draw_creature(screen, creature):
-    for body in (creature.body, creature.lleg, creature.lfoot, 
-                 creature.rleg, creature.rfoot):
-        for fixture in body.fixtures:
-            shape = fixture.shape
-            if shape.type == 2:  # Polygon shape
-                # Convert vertices local coord to absolute px coord
-                vertices = [world_to_px(body.transform * v) for v in shape.vertices]
-                pygame.draw.polygon(screen, (200, 200, 200, 255), vertices)
-            if shape.type == 0: # Circle shape
-                color = (255, 255, 255, 255)
-                # Check if it is a sensor
-                if isinstance(fixture.userData, tuple) and \
-                    world.contactListener.sensors[fixture.userData[0]][fixture.userData[1]] == True:
-                    color = (0, 255, 0, 255)
-                pygame.draw.circle(screen, color,
-                                   world_to_px(body.transform * shape.pos),
-                                   int(shape.radius * PPM))
-
-
-# --- main game loop ---
 time0 = datetime.time()
 running = True
 generation = START_GEN
@@ -103,6 +74,8 @@ creature.set_target(target)
 creature.init_body()
 score_min = 100
 
+
+# ============== Simulation Main Loop ==============
 while running:
     creature.update(world.contactListener.sensors[creature.id], mirror)
     if SCORE_MIN:
@@ -121,22 +94,16 @@ while running:
                 elif event.key == K_m:
                     mirror = not mirror
                     if mirror: print('mirror')
-                    if not mirror: print('not mirror') 
+                    if not mirror: print('not mirror')
         
         screen.fill((0, 0, 0, 0))
         
-        for body in (ground_body,):  # or: world.bodies
-            for fixture in body.fixtures:
-                shape = fixture.shape
-                vertices = [(body.transform * v) * PPM for v in shape.vertices]
-                vertices = [(v[0], SCREEN_HEIGHT - v[1]) for v in vertices]
-    
-                pygame.draw.polygon(screen, (255, 255, 255, 255), vertices)
-        
-        pygame.draw.circle(screen, (255,0,0,255), world_to_px(target), 5)
-        draw_creature(screen, creature)
+        # Set camera center on current creature
+        camera.set_target(creature.body.position)
+        camera.render()
         pygame.display.flip()
         clock.tick(TARGET_FPS)
+    
     
     world.Step(TIME_STEP, 6, 2)
     steps += 1

@@ -110,7 +110,7 @@ def import_creatures(filename, world, startpos):
         lines = [l.strip() for l in f.readlines()]
         for l in lines:
             if l.startswith('history:'):
-                batch_history = l[8:].strip()
+                history = l[8:].strip()
             elif l.startswith('layers:'):
                 layers = eval(l[7:].strip())
             elif l == '####':
