@@ -7,16 +7,18 @@ if PRESENTATION:
     DISPLAY = True
     BREED = False
 
-START_GEN = 0
 END_GEN = 350
-STARTING_POPULATION = 400
+START_POP = 200
 WINNERS_PER_GENERATION = 15
 MAX_STEPS = 500
-TARGET = (40, 2)
+TARGET = (35, 2)
 
-STARTPOS = (14, 2)
+STARTPOS = (0, 3)
 TARGETS = [(-12, 2), (40, 2)]    # Run
 #TARGETS = [(16.5, 4), (16.5, 4)]	# Jump
 SCORE_MIN = False
 
-NEURON_LAYERS = [10, 16, 16, 4] # including input and output layers
+# [10, 24, 24, 24, 24, 4]    # Cubotron1000
+# [15, 30, 30, 30, 6]    # Boulotron2000
+NEURON_LAYERS = [15, 30, 30, 12, 6] # including input and output layers
+ACTIVATION = "tanh"

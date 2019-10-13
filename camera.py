@@ -3,6 +3,7 @@
 
 
 from __future__ import division
+from math import (floor, ceil)
 import pygame
 from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, pi, vec2, queryCallback, AABB)
 
@@ -39,9 +40,23 @@ class Camera:
                 #Ground line
                 p0 = self.cam.world_to_px(-self.cam.center+shape.vertices[0])
                 p1 = self.cam.world_to_px(-self.cam.center+shape.vertices[1])
+                
+                screen_left = self.cam.center.x-self.cam.width/2
+                screen_right = self.cam.center.x+self.cam.width/2
+                for i in range(int(floor(screen_left)), int(floor(screen_right))):
+                    topleft = self.cam.world_to_px((i, shape.vertices[0][1]-self.cam.center.y))
+                    width = ceil(self.cam.HPPM)
+                    height = self.cam.SH-p0[1]
+                    ### print(topleft, width, height)
+                    if i%2 == 1:
+                        pygame.draw.rect(self.screen, (128, 128, 128, 10), (topleft, (width, height)))
+                    else:
+                        pygame.draw.rect(self.screen, (64, 64, 64, 10), (topleft, (width, height)))
+                """
                 p0 = (max(0, p0[0]), p0[1])
                 p1 = (min(p1[0], self.cam.SW), p1[1])
                 pygame.draw.rect(self.screen, (100, 100, 100, 10), (p0[0], p0[1], p1[0]-p0[0], self.cam.SH-p0[1]))
+                """
                 
             # Continue the query by returning True
             return True
