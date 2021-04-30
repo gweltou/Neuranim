@@ -11,6 +11,7 @@ from nn import *
 import Box2D  # The main library
 # Box2D.b2 maps Box2D.b2Vec2 to vec2 (and so on)
 from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, pi, vec2)
+from creatures import *
 from parameters import *
 
 
@@ -53,9 +54,11 @@ class Game:
                                        int(shape.radius*PPM))
     
     def import_creature(self, filename):
-        self.creature = import_creatures(filename, self.world, vec2(5,3))[0][0]
+        data = import_creatures(filename, self.world, vec2(5,3))
+        self.creature = data["creatures"][0]
         self.creature.init_body()
         self.creature.set_target(vec2(0,0))
+    
     
     def mainloop(self):
         while self.running:            

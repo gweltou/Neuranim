@@ -76,6 +76,7 @@ def import_creatures(filename, world, startpos):
     return data
 
 
+
 class Animatronic(object):
     def __init__(self, world, position=(0, 0),
                  layers=NEURON_LAYERS, activation=ACTIVATION):

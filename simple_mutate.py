@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import division
+
 from heapq import heappush, heappop
 import datetime
 import pygame
@@ -20,10 +20,11 @@ from parameters import *
 
 TARGET_FPS = 60
 TIME_STEP = 1.0 / TARGET_FPS
-SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
+SCREEN_WIDTH, SCREEN_HEIGHT = 800, 480
 
 
 batch_history = ""
+
 
 
 class Stats:
@@ -60,13 +61,13 @@ class Stats:
         self.var_dict = {}
 
 
+
 class Evolve:
     def __init__(self):
         self.world = world(contactListener=nnContactListener(),
                            gravity=(0, -10),
                            doSleep=True)
         self.time_init = datetime.time()
-        #self.running = True
         self.pool = []
         self.stats = Stats()
         
@@ -95,10 +96,10 @@ class Evolve:
     
     
     def newGeneration(self, winners):
-        print("{} drones selected with scores {}".format(len(winners),
-                                                         zip(*winners)[0]))
+        #print("{} drones selected with scores {}".format(len(winners),
+        #                                                 zip(*winners)[0]))
         # Add previous generation winners to new pool
-        new_pool = list(zip(*winners)[1])
+        new_pool = list(list(zip(*winners))[1])
         # Add winners offspring to new pool
         offspring = []
         # Make 10 copies of every winner
@@ -164,7 +165,8 @@ class Evolve:
                 self.screen.fill((0, 0, 0, 0))
                 
                 # Set camera center on current creature
-                #camera.set_target(creature.body.position+vec2(0.0,0.1)) # A little bit above the subject
+                # A little bit above the subject
+                #self.camera.set_target(creature.body.position+vec2(0.0,0.1)) # Ground texturing not working
                 self.camera.render()
                 pygame.display.flip()
                 self.clock.tick(TARGET_FPS)
