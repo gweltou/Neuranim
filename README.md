@@ -1,4 +1,5 @@
 # Neuranim
+![preview](res/neuranim.gif)
 
 ## TODO:
  * Implémenter la nouvelle morphologie (avec perception de l'horizontalité et de la hauteur par rapport au sol)
