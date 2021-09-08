@@ -89,38 +89,53 @@ def cross2(array1, array2):
 
 
 
+def sigmoid(x):
+    return 1 / (1+np.exp(-x))
+    
+def tanh(x):
+    # Better than sigmoid for our purpose
+    return (np.exp(x)-np.exp(-x)) / (np.exp(x)+np.exp(-x))
+    
+def relu(x):
+    return np.maximum(x, np.zeros_like(x))
+    
+def sigmoid_derivative(x):
+    return x*(1-x)
+
+
+
 class NeuralNetwork:
-    def __init__(self, layers, activation="tanh"):
-        activations = { "tanh": self.tanh,
-                        "sigmoid": self.sigmoid,
-                        "sigmoid_derivative": self.sigmoid_derivative,
-                        "relu": self.relu}
-        
-        # Hyper-parameters
-        self.layers = layers
-        self.total_neurons = sum(layers)
-        self.total_synapses = sum(layers[i]*layers[i+1] for i in range(len(layers)-1))
-        self.activation = activation.lower()
-        if activation in activations:
-            self.activation_f = activations[activation]
-        
-        # Weights
+    activations = { "tanh": tanh,
+                    "sigmoid": sigmoid,
+                    "sigmoid_derivative": sigmoid_derivative,
+                    "relu": relu}        
+    
+    def init_weights(self, layers):
         self.weights = []
-        for i in range(len(self.layers)-1):
-            self.weights.append(np.random.uniform(size=(self.layers[i]+1, self.layers[i+1]), low=-1, high=1))
+        for i in range(len(layers)-1):
+            # Fill neural network with random values between -1 and 1
+            self.weights.append(np.random.uniform(size=(layers[i]+1, layers[i+1]), low=-1, high=1))
     
-    def sigmoid(self, x):
-        return 1 / (1+np.exp(-x))
+    def set_weights(self, weights):
+        self.weights = weights
     
-    def tanh(self, x):
-        # Better than sigmoid for our purpose
-        return (np.exp(x)-np.exp(-x)) / (np.exp(x)+np.exp(-x))
+    def set_activation(self, activation):
+        self.activation = activation.lower()
+        self.activation_f = self.activations[self.activation]
     
-    def relu(self, x):
-        return np.maximum(x, np.zeros_like(x))
+    def get_layers(self):
+        """ Returns number of neurons in each layer (input and output layers included)
+        """
+        n = len(self.weights)
+        return [len(self.weights[i])-1 for i in range(n)] + [len(self.weights[-1][0])]
     
-    def sigmoid_derivative(self, x):
-        return x*(1-x)
+    def get_total_neurons(self):
+        layers = self.get_layers()
+        return sum(layers)
+    
+    def get_total_synapses(self):
+        layers = self.get_layers()
+        return sum(layers[i]*layers[i+1] for i in range(len(layers)-1))
     
     def feedforward(self, x):
         self.output = np.array(x+[1.0])   # Add the bias unit
@@ -130,9 +145,11 @@ class NeuralNetwork:
         self.output = self.activation_f(np.dot(self.output, self.weights[-1]))
     
     def copy(self):
-        new_nn = NeuralNetwork(self.layers)
-        new_nn.weights = []
+        new_nn = NeuralNetwork()
+        weights = []
         for w in self.weights:
-            new_nn.weights.append(w.copy())
+            weights.append(w.copy())
+        new_nn.set_weights(weights)
+        new_nn.set_activation(self.activation)
         return new_nn
 

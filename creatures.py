@@ -21,9 +21,9 @@ def save_creatures(filename, creatures, history="", stats="", generation=0):
             lines.append('\n')
         header = []
         header.append('type: {}\n'.format(creatures[0][1].id))
-        header.append('layers: {}\n'.format(creatures[0][1].nn.layers))
-        header.append('neurons: {}\n'.format(creatures[0][1].nn.total_neurons))
-        header.append('synapses: {}\n'.format(creatures[0][1].nn.total_synapses))
+        header.append('layers: {}\n'.format(creatures[0][1].nn.get_layers()))
+        header.append('neurons: {}\n'.format(creatures[0][1].nn.get_total_neurons()))
+        header.append('synapses: {}\n'.format(creatures[0][1].nn.get_total_synapses()))
         header.append('activation: {}\n'.format(creatures[0][1].nn.activation))
         header.append('generation: {}\n'.format(generation))
         header.append('history: {}\n'.format(history))
@@ -32,12 +32,12 @@ def save_creatures(filename, creatures, history="", stats="", generation=0):
         f.writelines(header + lines)
 
 
-def import_creatures(filename, world, startpos):
+def import_creatures(filename, world):
     creatures = []
     c = None
     layers = []
     data = dict()
-    cType = "Animatronic"
+    creature_type = "Animatronic"
     activation = ACTIVATION
     with open(filename, 'r') as f:
         lines = [l.strip() for l in f.readlines()]
@@ -53,20 +53,20 @@ def import_creatures(filename, world, startpos):
             elif l.startswith('stats:'):
                 data['stats'] = eval(l[6:].strip())
             elif l.startswith('type:'):
-                cType = l[5:].strip()
+                creature_type = l[5:].strip()
             elif l == '####':
                 # New creature definition
                 if c:
                     creatures.append(c)
-                if cType == "Boulotron2000":
-                    c = Boulotron2000(world, position=startpos,
-                                      layers=layers, activation=activation)
-                elif cType == "Animatronic":
-                    c = Animatronic(world, position=startpos,
-                                    layers=layers, activation=activation)
+                if creature_type == "Boulotron2000":
+                    c = Boulotron2000(world, hidden=[], activation=activation)
+                    c.nn.weights = []   # Clear neural network
+                elif creature_type == "Animatronic" or creature_type == "Cubotron1000":
+                    c = Cubotron1000(world, hidden=[], activation=activation)
+                    c.nn.weights = []   # Clear neural network
                 else:
                     print("Error: no type in creature definition")
-                c.nn.weights = []
+                    sys.exit(1)
             elif l.startswith('[['):
                 # Weight array
                 c.nn.weights.append(np.array(eval(l)))
@@ -77,16 +77,82 @@ def import_creatures(filename, world, startpos):
 
 
 
+
 class Animatronic(object):
-    def __init__(self, world, position=(0, 0),
-                 layers=NEURON_LAYERS, activation=ACTIVATION):
+    """ Abstract class
+    """
+    id = "Animatronic" # This should be unique in case of many creatures in the same world
+    
+    def __init__(self, world):
         self.world = world
-        self.position = vec2(position)
-        self.target = vec2(TARGET)
-        self.nn = NeuralNetwork(layers, activation)
-        self.keeper = False
-        self.id = "Animatronic"
         self.score = 0
+        self.keeper = False
+    
+    def set_start_position(self, x, y):
+        self.start_position = vec2(x, y)
+    
+    def set_target(self, x, y):
+        self.target = vec2(x, y)
+    
+    def breed(self, other):
+        nn = NeuralNetwork(NEURON_LAYERS)
+        nn.weights = []
+        for w1, w2 in zip(self.nn.weights, other.nn.weights):
+            nn.weights.append(cross2(w1, w2))
+        
+        child = Animatronic(self.world, self.position)
+        child.nn = nn
+        child.mutate()
+        return child
+    
+    def copy(self):
+        duplicate = self.__class__(self.world)
+        duplicate.nn = self.nn.copy()
+        return duplicate
+    
+    def mutate(self):
+        total_synapses = self.nn.get_total_synapses()
+        for w in self.nn.weights:
+            wf = w.flat
+            for i in range(w.size):
+                if np.random.randint(total_synapses//2) == 0:
+                    wf[i] = np.random.random()*2 - 1.0
+    
+    def destroy(self):
+        for joint in self.joints:
+            self.world.DestroyJoint(joint)
+        for body in self.bodies:
+            self.world.DestroyBody(body)
+        self.world.contactListener.unregisterSensors(self.id)
+
+
+
+
+class Cubotron1000(Animatronic):
+    """"
+         Neural network input layer:
+             [pos.x] [pos.y] [joints × 4] [contact_sensors × 4]
+             
+             Contact sensors:
+                 - lfoot
+                 - lheel
+                 - lbody
+                 - rbody
+                 - rheel
+                 - rfoot
+             Other sensors:
+                 - body_angle
+    """
+    
+    def __init__(self, world, hidden=[24, 24, 24], activation="tanh"):
+        self.n_sensors = 4
+        layers = [2+4+4] + hidden + [self.n_sensors]
+        self.nn = NeuralNetwork()
+        self.nn.init_weights(layers)
+        self.nn.set_activation(activation)
+        self.id = "Cubotron1000"
+        super().__init__(world)
+        
     
     def init_body(self):
         """
@@ -100,7 +166,7 @@ class Animatronic(object):
         
         self.bodies = []
         
-        self.body = self.world.CreateDynamicBody(position=self.position)
+        self.body = self.world.CreateDynamicBody(position=self.start_position)
         self.body.CreatePolygonFixture(box=(0.5, 0.5), density=1, friction=0.3,
                                        userData = "body_trunc")
         # Ground/Body sensors
@@ -113,19 +179,19 @@ class Animatronic(object):
         self.bodies.append(self.body)
         
         # Legs
-        self.lleg = self.world.CreateDynamicBody(position=self.position)
+        self.lleg = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.lleg.CreatePolygonFixture(box=(0.3, 0.15), density=1, friction=0.3,
                                                  userData = "lleg")
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.lleg)
         
-        self.rleg = self.world.CreateDynamicBody(position=self.position)
+        self.rleg = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.rleg.CreatePolygonFixture(box=(0.3, 0.15), density=1, friction=0.3)
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.rleg)
         
         # Feet
-        self.lfoot = self.world.CreateDynamicBody(position=self.position)
+        self.lfoot = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.lfoot.CreatePolygonFixture(box=(0.36, 0.08), density=1, friction=0.3,
                                                   userData = "lfoot")
         fixture.filterData.groupIndex = -1
@@ -135,7 +201,7 @@ class Animatronic(object):
                                        density=1, friction=1.0, restitution=0.0,
                                        userData = (self.id, 0), groupIndex=-1)
         
-        self.rfoot = self.world.CreateDynamicBody(position=self.position)
+        self.rfoot = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.rfoot.CreatePolygonFixture(box=(0.36, 0.08), density=1, friction=0.3,
                                                   userData = "rfoot")
         fixture.filterData.groupIndex = -1
@@ -147,7 +213,6 @@ class Animatronic(object):
         self.bodies.append(self.lfoot)
         self.bodies.append(self.rfoot)
         
-        self.n_sensors = 4
         self.world.contactListener.registerSensors(self.id, self.n_sensors)
         
         self.joints = []
@@ -200,12 +265,9 @@ class Animatronic(object):
                 maxMotorTorque = 10.0
             ))
     
-    def set_target(self, pos):
-        self.target = vec2(pos)
     
     def update(self, list_sensors, mirror=False):
         dpos = self.target - self.body.position
-        #dpos = self.target
         if dpos.length > 1:
             dpos.Normalize()
         joint_angles = [(j.angle%(2*pi))/pi - 1 for j in self.joints]
@@ -229,37 +291,8 @@ class Animatronic(object):
         else:
             for i in range(len(self.joints)):
                 self.joints[i].motorSpeed = self.nn.output[i]*20
-    
-    def breed(self, other):
-        nn = NeuralNetwork(NEURON_LAYERS)
-        nn.weights = []
-        for w1, w2 in zip(self.nn.weights, other.nn.weights):
-            nn.weights.append(cross2(w1, w2))
-        
-        child = Animatronic(self.world, self.position)
-        child.nn = nn
-        child.mutate()
-        return child
-    
-    def copy(self):
-        duplicate = self.__class__(self.world, self.position)
-        nn = self.nn.copy()
-        duplicate.nn = nn
-        return duplicate
-    
-    def mutate(self):
-        for w in self.nn.weights:
-            wf = w.flat
-            for i in range(w.size):
-                if np.random.randint(self.nn.total_synapses//2) == 0:
-                    wf[i] = np.random.random()*2 - 1.0
-    
-    def destroy_body(self):
-        for joint in self.joints:
-            self.world.DestroyJoint(joint)
-        for body in self.bodies:
-            self.world.DestroyBody(body)
-        self.world.contactListener.unregisterSensors(self.id)
+
+
 
 
 
@@ -279,9 +312,14 @@ class Boulotron2000(Animatronic):
                  - body_angle
     """
     
-    def __init__(self, *args, **kwargs):
-        super(Boulotron2000, self).__init__(*args, **kwargs)
+    def __init__(self, world, hidden=[30, 30, 30], activation="tanh"):
+        self.n_sensors = 6
+        layers = [2+6+6+1] + hidden + [self.n_sensors]
+        self.nn = NeuralNetwork()
+        self.nn.init_weights(layers)
+        self.nn.set_activation(activation)
         self.id = "Boulotron2000"
+        super().__init__(world)
     
     
     def init_body(self):
@@ -290,12 +328,12 @@ class Boulotron2000(Animatronic):
             self.joints must be symetrical so it can be reversed for mirror mode
             
             Sensors number (n):
-                      (0)---X(1)-----x-----(2) [[[ BODY ]]] (3)-----x-----(4)X---(5)
+                  (0)---X(1)-----x-----(2) [[[ BODY ]]] (3)-----x-----(4)X---(5)
         """
         
         self.bodies = []
         
-        self.body = self.world.CreateDynamicBody(position=self.position)
+        self.body = self.world.CreateDynamicBody(position=self.start_position)
         self.body.CreateCircleFixture(pos=(0.0, 0.0), radius=0.6, density=1.0,
                                       userData = "body_trunc")
         self.bodies.append(self.body)
@@ -311,26 +349,26 @@ class Boulotron2000(Animatronic):
         
         
         # Thighs
-        self.lthigh = self.world.CreateDynamicBody(position=self.position)
+        self.lthigh = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.lthigh.CreatePolygonFixture(box=(0.3, 0.15), density=1, friction=0.3,
                                                  userData = "lthigh")
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.lthigh)
         
-        self.rthigh = self.world.CreateDynamicBody(position=self.position)
+        self.rthigh = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.rthigh.CreatePolygonFixture(box=(0.3, 0.15), density=1, friction=0.3)
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.rthigh)
         
         
         # Legs
-        self.lleg = self.world.CreateDynamicBody(position=self.position)
+        self.lleg = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.lleg.CreatePolygonFixture(box=(0.36, 0.1), density=1, friction=0.3,
                                                   userData = "lthigh")
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.lleg)
         
-        self.rleg = self.world.CreateDynamicBody(position=self.position)
+        self.rleg = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.rleg.CreatePolygonFixture(box=(0.36, 0.1), density=1, friction=0.3,
                                                   userData = "rleg")
         fixture.filterData.groupIndex = -1
@@ -347,13 +385,13 @@ class Boulotron2000(Animatronic):
         
         
         # Feet
-        self.lfoot  = self.world.CreateDynamicBody(position=self.position)
+        self.lfoot  = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.lfoot.CreatePolygonFixture(box=(0.2, 0.08), density=1, friction=0.3,
                                                   userData = "lfoot")
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.lfoot)
         
-        self.rfoot = self.world.CreateDynamicBody(position=self.position)
+        self.rfoot = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.rfoot.CreatePolygonFixture(box=(0.2, 0.08), density=1, friction=0.3,
                                                   userData = "rfoot")
         fixture.filterData.groupIndex = -1
@@ -368,7 +406,8 @@ class Boulotron2000(Animatronic):
                                        density=1, friction=1.0, restitution=0.0,
                                        userData = (self.id, 5), groupIndex=-1)
         
-        self.world.contactListener.registerSensors(self.id, 6) # Contact sensors
+        # Contact sensors
+        self.world.contactListener.registerSensors(self.id, self.n_sensors)
         
         self.joints = []
         self.joints.append(
