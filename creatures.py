@@ -19,6 +19,7 @@ class Animatronic(object):
         self.world = world
         self.score = 0
         self.keeper = False
+        self.sensors = []
     
     def set_start_position(self, x, y):
         self.start_position = vec2(x, y)
@@ -51,7 +52,7 @@ class Animatronic(object):
                     # Another random weight between -1 and 1
                     r = np.random.random()*2 - 1.0
                     # Deactivate synapse if close enough to 0
-                    if abs(r) < 0.01: r = 0
+                    if abs(r) < 0.02: r = 0
                     # Keep deactivated
                     if wf[i] != 0: wf[i] = r
     
@@ -203,7 +204,7 @@ class Cubotron1000(Animatronic):
             ))
     
     
-    def update(self, list_sensors, mirror=False):
+    def update(self, sensors, mirror=False):
         dpos = self.target - self.body.position
         if dpos.length > 1:
             dpos.Normalize()
@@ -212,13 +213,13 @@ class Cubotron1000(Animatronic):
         for i in range(len(joint_angles)//2 + len(joint_angles)%2, len(joint_angles)):
             joint_angles[i] *= -1
         
-        to_nn = [dpos.x, dpos.y] + joint_angles + list_sensors
+        self.sensors = [dpos.x, dpos.y] + joint_angles + sensors
         if dpos.x < 0 or mirror:
             # Mirror mode
             joint_angles = joint_angles[::-1]
-            to_nn = [-dpos.x, dpos.y] + joint_angles + list_sensors[::-1]
+            self.sensors = [-dpos.x, dpos.y] + joint_angles + sensors[::-1]
         
-        self.nn.feedforward(to_nn)
+        self.nn.feedforward(self.sensors)
         if dpos.x < 0 or mirror:
             # Mirror mode
             self.joints[0].motorSpeed = -self.nn.output[3]*20
@@ -422,7 +423,7 @@ class Boulotron2000(Animatronic):
     
     
     
-    def update(self, list_sensors, mirror=False):
+    def update(self, sensors, mirror=False):
         dpos = self.target - self.body.position
         if dpos.length > 1:                          # Radius of sight
             dpos.Normalize()
@@ -436,10 +437,10 @@ class Boulotron2000(Animatronic):
         else:
             body_angle = (self.bodies[0].angle%(2*pi)) / (2*pi)
         
-        to_nn = [dpos.x, dpos.y] + joint_angles + list_sensors + [body_angle]
+        self.sensors = [dpos.x, dpos.y] + joint_angles + sensors + [body_angle]
         if dpos.x < 0 or mirror:
             # Mirror mode
-            to_nn = [-dpos.x, dpos.y] + joint_angles[::-1] + list_sensors[::-1] + [body_angle]
+            self.sensors = [-dpos.x, dpos.y] + joint_angles[::-1] + sensors[::-1] + [body_angle]
         
         # Send input to neural network
         self.nn.feedforward(to_nn)
@@ -653,7 +654,7 @@ class Boulotron2001(Animatronic):
     
     
     
-    def update(self, list_sensors, mirror=False):
+    def update(self, sensors, mirror=False):
         dpos = self.target - self.body.position
         if dpos.length > 1:                          # Radius of sight
             dpos.Normalize()
@@ -667,13 +668,14 @@ class Boulotron2001(Animatronic):
         else:
             body_angle = (self.bodies[0].angle%(2*pi)) / (2*pi)
         
-        to_nn = [dpos.x, dpos.y] + joint_angles + list_sensors + [body_angle]
         if dpos.x < 0 or mirror:
             # Mirror mode
-            to_nn = [-dpos.x, dpos.y] + joint_angles[::-1] + list_sensors[::-1] + [body_angle]
+            self.sensors = [-dpos.x, dpos.y] + joint_angles[::-1] + sensors[::-1] + [body_angle]
+        else:
+            self.sensors = [dpos.x, dpos.y] + joint_angles + sensors + [body_angle]
         
         # Send input to neural network
-        self.nn.feedforward(to_nn)
+        self.nn.feedforward(self.sensors)
         
         # Read output from neural network
         if dpos.x < 0 or mirror:

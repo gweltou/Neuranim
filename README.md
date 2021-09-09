@@ -14,9 +14,10 @@
 
 ## Types de mutations
 Chaque exécution de la fonction Animatronic.mutate provoque la mutation de 2 gènes en moyenne.
-Une mutation peut définir une nouvelle valeur (entre -1 et 1) à un gène ou bien le désactiver (valeur définie à 0). Un gène désactivé ne subit plus de mutations et il ne peut donc pas être réactivé. Les désactivations représentent 1% des mutations.
+Une mutation peut définir une nouvelle valeur (entre -1 et 1) à un gène ou bien le désactiver (valeur définie à 0). Un gène désactivé ne subit plus de mutations et il ne peut donc pas être réactivé. Les désactivations représentent 2% des mutations.
 
 ## TODO:
  * Implémenter la nouvelle morphologie (avec perception de l'horizontalité et de la hauteur par rapport au sol)
  * Utiliser des scenarios d'entrainement
  * Texturer le sol
+ * Utiliser des arguments pour activer le mode présentation

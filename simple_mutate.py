@@ -22,11 +22,10 @@ from parameters import *
 
 TARGET_FPS = 60
 TIME_STEP = 1.0 / TARGET_FPS
-SCREEN_WIDTH, SCREEN_HEIGHT = 1000, 480
+SCREEN_WIDTH, SCREEN_HEIGHT = 1000, 600
 
 
 batch_history = ""
-
 
 
 def save_generation(filename, population, history="", stats="", generation=0):
@@ -94,6 +93,24 @@ def import_generation(filename, world):
     data['layers'] = layers
     return data
 
+
+def build_nn_coords(nn):
+    coords = []
+    layers = nn.get_layers()
+    breadth = max(layers)
+    depth = len(layers)
+    x_step = SCREEN_WIDTH / depth
+    y_step = SCREEN_HEIGHT / (breadth+1)
+    x = x_step / 2
+    for l in layers:
+        l_coords = []
+        y = y_step * (breadth - l) / 2
+        for n in range(l):
+            y += y_step
+            l_coords.append((x, y,))
+        coords.append(l_coords)
+        x += x_step
+    return coords
 
 
 class Evolve:
@@ -185,12 +202,10 @@ class Evolve:
         display_nn = False
         running = True
         mirror = False
+        nn_coords = build_nn_coords(creature.nn)
         while running:
-            creature.update(self.world.contactListener.sensors[creature.id], mirror)
-            if SCORE_MIN:
-                score_min = min(score_min, (creature.target - creature.body.position).length)
-            
             if DISPLAY:
+                # Process keyboard events
                 for event in pygame.event.get():
                     if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
                         running = False
@@ -201,16 +216,44 @@ class Evolve:
                             mirror = not mirror
                             if mirror: print('mirror')
                             if not mirror: print('not mirror')
-                        elif event.k == K_d:
+                        elif event.key == K_d:
                             display_nn = not display_nn
-                            print("display_nn", display_nn)
-                
+            
+            if display_nn:
+                creature.nn.save_state = True
+            else:
+                creature.nn.save_state = False
+            creature.update(self.world.contactListener.sensors[creature.id], mirror)
+            
+            if SCORE_MIN:
+                score_min = min(score_min, (creature.target - creature.body.position).length)
+            
+            if DISPLAY:
                 self.screen.fill((0, 0, 0, 0))
                 
                 # Set camera center on current creature
                 # A little bit above the subject
                 #self.camera.set_target(creature.body.position+vec2(0.0,0.1)) # Ground texturing not working
                 self.camera.render()
+                
+                if display_nn:
+                    white = (255, 255, 255, 255)
+                    for j in range(len(nn_coords)-1):
+                        for i in range(len(nn_coords[j])):
+                            for w in range(len(nn_coords[j+1])):
+                                p1 = nn_coords[j][i]
+                                p2 = nn_coords[j+1][w]
+                                pygame.draw.line(self.screen, white, p1, p2, 1)
+                    for layer_num in range(len(nn_coords)):
+                        for neuron_num in range(len(nn_coords[layer_num])):
+                            x, y = nn_coords[layer_num][neuron_num]
+                            neuron_value = creature.nn.state[layer_num][neuron_num]
+                            green = round(max(0, neuron_value) * 255)
+                            red = round(abs(min(0, neuron_value)) * 255)
+                            color = (red, green, 0)
+                            pygame.draw.circle(self.screen, color, (x, y), 8)
+                            
+                
                 pygame.display.flip()
                 self.clock.tick(TARGET_FPS)
             
@@ -223,7 +266,6 @@ class Evolve:
                 score = (creature.target - creature.body.position).length
                 if SCORE_MIN:
                     score = score_min
-                #print(len(podium), score)
                 podium.append((score, creature,))
                 creature.destroy()
                 
