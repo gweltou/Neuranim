@@ -3,7 +3,6 @@
 
 
 import numpy as np
-#from Box2D.b2 import (vec2, world, circleShape, polygonShape, staticBody, dynamicBody, fixtureDef, pi, contactListener)
 from Box2D.b2 import contactListener
 from parameters import *
 
@@ -134,8 +133,7 @@ class NeuralNetwork:
         return sum(layers)
     
     def get_total_synapses(self):
-        layers = self.get_layers()
-        return sum(layers[i]*layers[i+1] for i in range(len(layers)-1))
+        return sum([w.size for w in self.weights])
     
     def feedforward(self, x):
         self.output = np.array(x+[1.0])   # Add the bias unit
@@ -152,4 +150,15 @@ class NeuralNetwork:
         new_nn.set_weights(weights)
         new_nn.set_activation(self.activation)
         return new_nn
+    
+    def compare_weights(self, other):
+        assert self.get_layers() == other.get_layers(), "neural network architectures are different"
+        diff = []
+        mutations = 0
+        for i in range(len(self.weights)):
+            diff.append(self.weights[i] == other.weights[i])
+            mutations += sum(self.weights[i] != other.weights[i])
+        print("{} mutation(s) ({}%)".format(mutations, mutations / self.get_total_synapses()))
+        return diff
+        
 

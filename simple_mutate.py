@@ -3,16 +3,16 @@
 
 
 import sys
+import os.path
 import datetime
 import random
 import numpy as np
 import pygame
-from pygame.locals import (QUIT, KEYDOWN, K_ESCAPE, K_LEFT, K_RIGHT, K_UP, K_DOWN, K_k, K_m)
+from pygame.locals import (QUIT, KEYDOWN, K_ESCAPE, K_LEFT, K_RIGHT, K_UP, K_DOWN, K_k, K_m, K_d)
 from nn import *
-from creatures import *
+import creatures
 from camera import Camera
-if PLOT_EVOLUTION:
-    import matplotlib.pyplot as plt
+from stats import Stats
 
 
 # Box2D.b2 maps Box2D.b2Vec2 to vec2 (and so on)
@@ -22,37 +22,77 @@ from parameters import *
 
 TARGET_FPS = 60
 TIME_STEP = 1.0 / TARGET_FPS
-SCREEN_WIDTH, SCREEN_HEIGHT = 800, 480
+SCREEN_WIDTH, SCREEN_HEIGHT = 1000, 480
 
 
 batch_history = ""
 
 
 
-class Stats:
-    def __init__(self):
-        self.var_dict = {}
-    
-    def feed(self, *values):
-        if len(self.var_dict) == 0:
-            for var, v in enumerate(values):
-                self.var_dict[var] = [v]
-        else:
-            for var, v in enumerate(values):
-                self.var_dict[var].append(v)
-        #print(self.var_dict)
-    
-    def savePlot(self, filename, title=''):
-        plt.close()
-        plt.plot(self.var_dict[0], self.var_dict[1], label='gen score')
-        plt.plot(self.var_dict[0], self.var_dict[2], label='best')
-        plt.plot(self.var_dict[0], self.var_dict[3], label='worst')
-        plt.legend()
-        plt.title(title)
-        plt.savefig(filename)
+def save_generation(filename, population, history="", stats="", generation=0):
+    with open(filename, 'w') as f:
+        lines = []
+        for (score, c) in population:
+            lines.append('####\n')
+            lines.append('score: {}\n'.format(score))
+            for weight in c.nn.weights:
+                lines.append(str(weight.tolist()))
+                lines.append('\n')
+            lines.append('\n')
+        header = []
+        header.append('type: {}\n'.format(population[0][1].id))
+        header.append('layers: {}\n'.format(population[0][1].nn.get_layers()))
+        header.append('neurons: {}\n'.format(population[0][1].nn.get_total_neurons()))
+        header.append('synapses: {}\n'.format(population[0][1].nn.get_total_synapses()))
+        header.append('activation: {}\n'.format(population[0][1].nn.activation))
+        header.append('generation: {}\n'.format(generation))
+        header.append('history: {}\n'.format(history))
+        header.append('stats: {}\n'.format(stats))
+        header.append('\n\n')
+        f.writelines(header + lines)
 
-    def reset(self):
-        self.var_dict = {}
+
+
+def import_generation(filename, world):
+    population = []
+    c = None
+    layers = []
+    data = dict()
+    creature_type = "Animatronic"
+    activation = ACTIVATION
+    with open(filename, 'r') as f:
+        lines = [l.strip() for l in f.readlines()]
+        for l in lines:
+            if l.startswith('history:'):
+                data['history'] = l[8:].strip()
+            elif l.startswith('layers:'):
+                layers = eval(l[7:].strip())
+            elif l.startswith("activation:"):
+                activation = l[11:].strip()
+            elif l.startswith('generation:'):
+                data['generation'] = int(l[11:].strip())
+            elif l.startswith('stats:'):
+                data['stats'] = eval(l[6:].strip())
+            elif l.startswith('type:'):
+                creature_type = l[5:].strip()
+            elif l == '####':
+                # New creature definition
+                if c:
+                    population.append(c)
+                if creature_type in dir(creatures):
+                    creature_class = getattr(creatures, creature_type)
+                    c = creature_class(world, hidden=[], activation=activation)
+                    c.nn.weights = []   # Clear neural network
+                else:
+                    print("Error: bad type in creature definition")
+                    sys.exit(1)
+            elif l.startswith('[['):
+                # Weight array
+                c.nn.weights.append(np.array(eval(l)))
+        population.append(c)
+    data['population'] = population
+    data['layers'] = layers
+    return data
 
 
 
@@ -83,10 +123,10 @@ class Evolve:
     
     
     def populate(self, n):
-        print("Starting from generation 0")
+        creature_class = getattr(creatures, ANIMATRONIC)
+        self.pool = [creature_class(self.world, HIDDEN_LAYERS, ACTIVATION) for i in range(n)]
         self.generation = 0
-        #self.pool = [Boulotron2000(self.world, HIDDEN_LAYERS, ACTIVATION) for i in range(n)]
-        self.pool = [Cubotron1000(self.world, HIDDEN_LAYERS, ACTIVATION) for i in range(n)]
+        print("Starting from generation 0   ({})".format(ANIMATRONIC))
     
     
     def newGeneration(self, winners):
@@ -109,16 +149,20 @@ class Evolve:
         print("New pool of {} drones".format(len(self.pool)))
     
     
-    def saveCreatures(self, creatures):
+    def saveCreatures(self, population):
+        directory = "run"
+        directory = os.path.join(directory, population[0][1].id)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
         filename = "gen{}.txt".format(self.generation)
-        save_creatures(filename, creatures, batch_history,
+        save_generation(os.path.join(directory, filename), population, batch_history,
                        self.stats.var_dict, self.generation)
 
     
     def importCreatures(self, filename):
-        data = import_creatures(filename, self.world)
+        data = import_generation(filename, self.world)
         batch_history = data["history"]
-        self.pool = data["creatures"]
+        self.pool = data["population"]
         self.generation = data["generation"]
         self.stats.reset()
         if "stats" in data:
@@ -138,6 +182,7 @@ class Evolve:
         creature.init_body()
         score_min = 100
         steps = 0
+        display_nn = False
         running = True
         mirror = False
         while running:
@@ -156,6 +201,9 @@ class Evolve:
                             mirror = not mirror
                             if mirror: print('mirror')
                             if not mirror: print('not mirror')
+                        elif event.k == K_d:
+                            display_nn = not display_nn
+                            print("display_nn", display_nn)
                 
                 self.screen.fill((0, 0, 0, 0))
                 
@@ -204,8 +252,10 @@ class Evolve:
                         self.saveCreatures(winners)
                         if PLOT_EVOLUTION:
                             c = winners[0][1]
-                            self.stats.savePlot("gen{}.png".format(self.generation),
-                                                "{} {}".format(c.id, str(c.nn.get_layers())))
+                            filename = "gen{}.png".format(self.generation)
+                            filename = os.path.join("run", c.id, filename)
+                            title = "{} {}".format(c.id, str(c.nn.get_layers()))
+                            self.stats.savePlot(filename, title)
                     
                     print("end of generation {}".format(self.generation))
                     print("generation score: {}".format(gen_score))

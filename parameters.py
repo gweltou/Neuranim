@@ -1,5 +1,5 @@
-#PRESENTATION = False	# Without display but enables evolution
-PRESENTATION = True	# With display ON and evolution OFF
+PRESENTATION = False	# Without display but enables evolution
+#PRESENTATION = True	# With display ON and evolution OFF
 
 
 DISPLAY = False
@@ -9,6 +9,14 @@ if PRESENTATION:
     BREED = False
 
 PLOT_EVOLUTION = True
+
+
+ANIMATRONIC = "Boulotron2001"   # Possible values: "Cubotron1000", "Boulotron2000", "Boulotron2001"
+ACTIVATION = "tanh"
+HIDDEN_LAYERS = [30, 30, 30, 30]
+# Recommended
+# [24, 24, 24, 24, 4]    # Cubotron1000
+# [15, 30, 30, 30, 6]    # Boulotron2000
 
 
 START_POP = 200
@@ -22,10 +30,3 @@ TARGET = (35, 2)
 TARGETS = [(-12, 2), (40, 2)]    # Run
 #TARGETS = [(16.5, 4), (16.5, 4)]	# Jump
 SCORE_MIN = False
-
-
-ACTIVATION = "tanh"
-HIDDEN_LAYERS = [30, 30]
-# Recommended
-# [24, 24, 24, 24, 4]    # Cubotron1000
-# [15, 30, 30, 30, 6]    # Boulotron2000
