@@ -8,7 +8,7 @@ import random
 import numpy as np
 from pygame.locals import (QUIT, KEYDOWN, K_ESCAPE, K_UP, K_DOWN, K_RIGHT, K_LEFT, K_r)
 from nn import *
-from boulotron import Boulotron2000
+from creatures import *
 from camera import Camera
 
 import Box2D  # The main library
@@ -41,7 +41,8 @@ ground_body.fixtures[0].friction = 1.0
 # --- main game loop ---
 DISPLAY = True
 running = True
-creature = Boulotron2000(world, position=(5, 5))
+creature = Boulotron2001(world)
+creature.set_start_position(5, 5)
 creature.init_body()
 
 
@@ -74,7 +75,7 @@ while running:
                     creature.rfoot.angle += 0.5
                     
         
-        camera.set_target(creature.position)
+        camera.set_target(creature.start_position)
         camera.render()
 
         pygame.display.flip()

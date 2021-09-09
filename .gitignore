@@ -1,0 +1,6 @@
+*.txt
+*.pyc
+*.png
+/__pycache__
+/bck
+/run
