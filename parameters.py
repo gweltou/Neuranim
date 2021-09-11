@@ -11,9 +11,9 @@ if PRESENTATION:
 PLOT_EVOLUTION = True
 
 
-ANIMATRONIC = "Boulotron2001"   # Possible values: "Cubotron1000", "Boulotron2000", "Boulotron2001"
+ANIMATRONIC = "Cubotron1000"   # Possible values: "Cubotron1000", "Boulotron2000", "Boulotron2001"
 ACTIVATION = "tanh"
-HIDDEN_LAYERS = [60, 60, 60, 60, 60]
+HIDDEN_LAYERS = [10]
 # Recommended
 # [24, 24, 24, 24, 4]    # Cubotron1000
 # [15, 30, 30, 30, 6]    # Boulotron2000
@@ -21,8 +21,8 @@ HIDDEN_LAYERS = [60, 60, 60, 60, 60]
 
 START_POP = 200
 WINNERS_PER_GENERATION = 15
-END_GEN = 350
-MAX_STEPS = 500
+END_GEN = 500
+MAX_STEPS = 600
 
 
 STARTPOS = (-8, 3)

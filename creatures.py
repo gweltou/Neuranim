@@ -4,18 +4,20 @@
 
 from Box2D.b2 import pi, vec2, world, circleShape, polygonShape, staticBody, dynamicBody, fixtureDef
 import numpy as np
+import uuid
 from parameters import *
 from nn import *
-
+from utils import FancyWords
 
 
 
 class Animatronic(object):
     """ Abstract class
     """
-    id = "Animatronic" # This should be unique in case of many creatures in the same world
     
     def __init__(self, world):
+        self.pop_id = FancyWords.generate_two()
+        self.id = uuid.uuid1().fields[0]
         self.world = world
         self.score = 0
         self.keeper = False
@@ -27,7 +29,7 @@ class Animatronic(object):
     def set_target(self, x, y):
         self.target = vec2(x, y)
     
-    def breed(self, other):
+    """def breed(self, other):
         nn = NeuralNetwork(NEURON_LAYERS)
         nn.weights = []
         for w1, w2 in zip(self.nn.weights, other.nn.weights):
@@ -37,10 +39,12 @@ class Animatronic(object):
         child.nn = nn
         child.mutate()
         return child
+    """
     
     def copy(self):
         duplicate = self.__class__(self.world)
         duplicate.nn = self.nn.copy()
+        duplicate.pop_id = self.pop_id
         return duplicate
     
     def mutate(self):
@@ -66,6 +70,7 @@ class Animatronic(object):
 
 
 
+
 class Cubotron1000(Animatronic):
     """"
          Neural network input layer:
@@ -82,13 +87,10 @@ class Cubotron1000(Animatronic):
                  - body_angle
     """
     
-    def __init__(self, world, hidden=[24, 24, 24], activation="tanh"):
+    def __init__(self, world):
+        self.morpho = "Cubotron1000"
         self.n_sensors = 4
-        layers = [2+4+4] + hidden + [self.n_sensors]
-        self.nn = NeuralNetwork()
-        self.nn.init_weights(layers)
-        self.nn.set_activation(activation)
-        self.id = "Cubotron1000"
+        self.n_inputs = 2+4+4
         super().__init__(world)
         
     
@@ -250,13 +252,10 @@ class Boulotron2000(Animatronic):
                  - body_angle
     """
     
-    def __init__(self, world, hidden=[30, 30, 30], activation="tanh"):
+    def __init__(self, world):
+        self.morpho = "Boulotron2000"
         self.n_sensors = 6
-        layers = [2+6+6+1] + hidden + [self.n_sensors]
-        self.nn = NeuralNetwork()
-        self.nn.init_weights(layers)
-        self.nn.set_activation(activation)
-        self.id = "Boulotron2000"
+        self.n_inputs = 2+6+6+1
         super().__init__(world)
     
     
@@ -481,13 +480,14 @@ class Boulotron2001(Animatronic):
                  - body_angle
     """
     
-    def __init__(self, world, hidden=[30, 30, 30], activation="tanh"):
+    def __init__(self, world):
+        self.morpho = "Boulotron2001"
         self.n_sensors = 6
-        layers = [2+6+6+1] + hidden + [self.n_sensors]
+        self.n_inputs = 2+6+6+1
         self.nn = NeuralNetwork()
         self.nn.init_weights(layers)
         self.nn.set_activation(activation)
-        self.id = "Boulotron2001"
+        
         super().__init__(world)
     
     

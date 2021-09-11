@@ -118,8 +118,8 @@ class NeuralNetwork:
             # Fill neural network with random values between -1 and 1
             self.weights.append(np.random.uniform(size=(layers[i]+1, layers[i+1]), low=-1, high=1))
     
-    def set_weights(self, weights):
-        self.weights = weights
+    #def set_weights(self, weights):
+    #    self.weights = weights
     
     def set_activation(self, activation):
         self.activation = activation.lower()
@@ -159,7 +159,7 @@ class NeuralNetwork:
         weights = []
         for w in self.weights:
             weights.append(w.copy())
-        new_nn.set_weights(weights)
+        new_nn.weights = weights
         new_nn.set_activation(self.activation)
         return new_nn
     
