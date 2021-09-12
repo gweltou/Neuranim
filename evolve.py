@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
 import sys
 import os.path
 import argparse
@@ -9,7 +8,7 @@ import datetime
 import random
 import numpy as np
 import pygame
-from pygame.locals import (QUIT, KEYDOWN, K_ESCAPE, K_LEFT, K_RIGHT, K_UP, K_DOWN, K_k, K_m, K_d)
+from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_LEFT, K_RIGHT, K_UP, K_DOWN, K_k, K_m, K_d, K_q
 from nn import *
 import creatures
 from renderer import Camera
@@ -20,10 +19,11 @@ from Box2D.b2 import (world, polygonShape, edgeShape, staticBody, dynamicBody, p
 from parameters import *
 
 
+DISPLAY = False
 TARGET_FPS = 60
 TIME_STEP = 1.0 / TARGET_FPS
 SCREEN_WIDTH, SCREEN_HEIGHT = 1000, 600
-
+BREED = True
 
 
 
@@ -81,6 +81,7 @@ class Evolve:
         creature_class = getattr(creatures, ANIMATRONIC)
         for i in range(n):
             c = creature_class(self.world)
+            c.pop_id = FancyWords.generate_two()
             nn = NeuralNetwork()
             layers = [c.n_inputs] + HIDDEN_LAYERS + [c.n_sensors]
             nn.init_weights(layers)
@@ -94,8 +95,8 @@ class Evolve:
 
 
     def nextGeneration(self, winners):
-        #print("{} drones selected with scores {}".format(len(winners),
-        #                                                 zip(*winners)[0]))
+        #TODO: could be simplified
+        
         # Add previous generation winners to new pool
         new_pool = [w[1] for w in winners]
         # Add winners offspring to new pool
@@ -115,8 +116,7 @@ class Evolve:
 
     def saveCreatures(self, population):
         c = population[0][1]
-        directory = "run"
-        directory = os.path.join(directory, c.morpho.lower(), c.pop_id.lower())
+        directory = self.get_path(c)
         if not os.path.exists(directory):
             os.makedirs(directory)
         filename = "gen{}.txt".format(self.generation)
@@ -136,8 +136,13 @@ class Evolve:
         print("{} drones imported".format(len(self.pool)))
         print("layers (input+hidden+output): {}".format(self.pool[0].nn.get_layers()))
         print("activation: {}".format(self.pool[0].nn.activation))
-
-
+    
+    
+    def get_path(self, c):
+        return os.path.join("run",
+            c.morpho.lower()+'_'+str(c.nn.get_total_neurons()), c.pop_id.lower())
+    
+    
     def mainLoop(self):
         target = vec2(TARGET) #vec2(random.choice(TARGETS))
         podium = []
@@ -155,9 +160,11 @@ class Evolve:
             if DISPLAY:
                 # Process keyboard events
                 for event in pygame.event.get():
-                    if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+                    if event.type == QUIT:
                         running = False
                     if event.type == KEYDOWN:
+                        if event.key == K_ESCAPE or event.key == K_q:
+                            running = False
                         if event.key == K_k:
                             steps = MAX_STEPS - 10
                         elif event.key == K_m:
@@ -185,13 +192,16 @@ class Evolve:
                 self.camera.render()
 
                 if display_nn:
-                    white = (255, 255, 255, 255)
+                    white = (255, 255, 255)
                     for j in range(len(nn_coords)-1):
                         for i in range(len(nn_coords[j])):
                             for w in range(len(nn_coords[j+1])):
                                 p1 = nn_coords[j][i]
                                 p2 = nn_coords[j+1][w]
-                                pygame.draw.line(self.screen, white, p1, p2, 1)
+                                neuron_value = creature.nn.state[j][i]
+                                weight_value = creature.nn.weights[j][i][w]
+                                if weight_value * neuron_value:
+                                    pygame.draw.line(self.screen, white, p1, p2, 1)
                     for layer_num in range(len(nn_coords)):
                         for neuron_num in range(len(nn_coords[layer_num])):
                             x, y = nn_coords[layer_num][neuron_num]
@@ -243,7 +253,7 @@ class Evolve:
                         if PLOT_EVOLUTION:
                             c = winners[0][1]
                             filename = "gen{}.png".format(self.generation)
-                            filename = os.path.join("run", c.morpho.lower(), c.pop_id.lower(), filename)
+                            filename = os.path.join(self.get_path(c), filename)
                             title = "{} {}".format(c.pop_id, str(c.nn.get_layers()))
                             self.stats.savePlot(filename, title)
 
@@ -266,19 +276,25 @@ class Evolve:
 def parseInputs():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('-v', '--view', action='store_true', help='enable presentation mode')
-    parser.add_argument('-f', help='population file')
+    parser.add_argument('-m', '--mutate', type=int, help='mutations frequency')
+    parser.add_argument('-f', '--file', type=str, help='population file')
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    #args = parseInputs()
-
+    args = parseInputs()
+    
+    DISPLAY = args.view
+    
     evolve = Evolve()
-    if len(sys.argv) == 2:
-        evolve.importCreatures(sys.argv[1])
-        evolve.nextGeneration([(d.score, d) for d in evolve.pool])
+    
+    if args.file:
+        evolve.importCreatures(args.file)
+        evolve.nextGeneration([(d.score, d) for d in evolve.pool])  #TODO: could be simplified
     else:
         evolve.populate(START_POP)
+    
     evolve.mainLoop()
+    
     pygame.quit()
     print('Done!')

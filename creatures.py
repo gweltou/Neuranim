@@ -7,7 +7,6 @@ import numpy as np
 import uuid
 from parameters import *
 from nn import *
-from utils import FancyWords
 
 
 
@@ -16,7 +15,6 @@ class Animatronic(object):
     """
     
     def __init__(self, world):
-        self.pop_id = FancyWords.generate_two()
         self.id = uuid.uuid1().fields[0]
         self.world = world
         self.score = 0
