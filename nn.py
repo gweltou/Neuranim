@@ -109,14 +109,17 @@ class NeuralNetwork:
                     "sigmoid_derivative": sigmoid_derivative,
                     "relu": relu}        
     
+    def __init__(self):
+        self.save_state = False # Keep calculated values of neurons after feedforward for display purposes
+    
     def init_weights(self, layers):
         self.weights = []
         for i in range(len(layers)-1):
             # Fill neural network with random values between -1 and 1
             self.weights.append(np.random.uniform(size=(layers[i]+1, layers[i+1]), low=-1, high=1))
     
-    def set_weights(self, weights):
-        self.weights = weights
+    #def set_weights(self, weights):
+    #    self.weights = weights
     
     def set_activation(self, activation):
         self.activation = activation.lower()
@@ -137,17 +140,26 @@ class NeuralNetwork:
     
     def feedforward(self, x):
         self.output = np.array(x+[1.0])   # Add the bias unit
+        if self.save_state:
+            self.state = []
+            self.state.append(self.output.copy())
+        
         for i in range(0, len(self.weights)-1):
             self.output = self.activation_f(np.dot(self.output, self.weights[i]))
             self.output = np.append(self.output, 1.0)   # Add the bias unit
+            if self.save_state:
+                self.state.append(self.output.copy())
+            
         self.output = self.activation_f(np.dot(self.output, self.weights[-1]))
+        if self.save_state:
+            self.state.append(self.output)
     
     def copy(self):
         new_nn = NeuralNetwork()
         weights = []
         for w in self.weights:
             weights.append(w.copy())
-        new_nn.set_weights(weights)
+        new_nn.weights = weights
         new_nn.set_activation(self.activation)
         return new_nn
     

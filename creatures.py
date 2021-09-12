@@ -4,21 +4,22 @@
 
 from Box2D.b2 import pi, vec2, world, circleShape, polygonShape, staticBody, dynamicBody, fixtureDef
 import numpy as np
+import uuid
 from parameters import *
 from nn import *
-
 
 
 
 class Animatronic(object):
     """ Abstract class
     """
-    id = "Animatronic" # This should be unique in case of many creatures in the same world
     
     def __init__(self, world):
+        self.id = uuid.uuid1().fields[0]
         self.world = world
         self.score = 0
         self.keeper = False
+        self.sensors = []
     
     def set_start_position(self, x, y):
         self.start_position = vec2(x, y)
@@ -26,7 +27,7 @@ class Animatronic(object):
     def set_target(self, x, y):
         self.target = vec2(x, y)
     
-    def breed(self, other):
+    """def breed(self, other):
         nn = NeuralNetwork(NEURON_LAYERS)
         nn.weights = []
         for w1, w2 in zip(self.nn.weights, other.nn.weights):
@@ -36,10 +37,12 @@ class Animatronic(object):
         child.nn = nn
         child.mutate()
         return child
+    """
     
     def copy(self):
         duplicate = self.__class__(self.world)
         duplicate.nn = self.nn.copy()
+        duplicate.pop_id = self.pop_id
         return duplicate
     
     def mutate(self):
@@ -51,7 +54,7 @@ class Animatronic(object):
                     # Another random weight between -1 and 1
                     r = np.random.random()*2 - 1.0
                     # Deactivate synapse if close enough to 0
-                    if abs(r) < 0.01: r = 0
+                    if abs(r) < 0.02: r = 0
                     # Keep deactivated
                     if wf[i] != 0: wf[i] = r
     
@@ -61,6 +64,7 @@ class Animatronic(object):
         for body in self.bodies:
             self.world.DestroyBody(body)
         self.world.contactListener.unregisterSensors(self.id)
+
 
 
 
@@ -81,13 +85,10 @@ class Cubotron1000(Animatronic):
                  - body_angle
     """
     
-    def __init__(self, world, hidden=[24, 24, 24], activation="tanh"):
+    def __init__(self, world):
+        self.morpho = "Cubotron1000"
         self.n_sensors = 4
-        layers = [2+4+4] + hidden + [self.n_sensors]
-        self.nn = NeuralNetwork()
-        self.nn.init_weights(layers)
-        self.nn.set_activation(activation)
-        self.id = "Cubotron1000"
+        self.n_inputs = 2+4+4
         super().__init__(world)
         
     
@@ -203,7 +204,7 @@ class Cubotron1000(Animatronic):
             ))
     
     
-    def update(self, list_sensors, mirror=False):
+    def update(self, sensors, mirror=False):
         dpos = self.target - self.body.position
         if dpos.length > 1:
             dpos.Normalize()
@@ -212,13 +213,13 @@ class Cubotron1000(Animatronic):
         for i in range(len(joint_angles)//2 + len(joint_angles)%2, len(joint_angles)):
             joint_angles[i] *= -1
         
-        to_nn = [dpos.x, dpos.y] + joint_angles + list_sensors
+        self.sensors = [dpos.x, dpos.y] + joint_angles + sensors
         if dpos.x < 0 or mirror:
             # Mirror mode
             joint_angles = joint_angles[::-1]
-            to_nn = [-dpos.x, dpos.y] + joint_angles + list_sensors[::-1]
+            self.sensors = [-dpos.x, dpos.y] + joint_angles + sensors[::-1]
         
-        self.nn.feedforward(to_nn)
+        self.nn.feedforward(self.sensors)
         if dpos.x < 0 or mirror:
             # Mirror mode
             self.joints[0].motorSpeed = -self.nn.output[3]*20
@@ -249,13 +250,10 @@ class Boulotron2000(Animatronic):
                  - body_angle
     """
     
-    def __init__(self, world, hidden=[30, 30, 30], activation="tanh"):
+    def __init__(self, world):
+        self.morpho = "Boulotron2000"
         self.n_sensors = 6
-        layers = [2+6+6+1] + hidden + [self.n_sensors]
-        self.nn = NeuralNetwork()
-        self.nn.init_weights(layers)
-        self.nn.set_activation(activation)
-        self.id = "Boulotron2000"
+        self.n_inputs = 2+6+6+1
         super().__init__(world)
     
     
@@ -422,7 +420,7 @@ class Boulotron2000(Animatronic):
     
     
     
-    def update(self, list_sensors, mirror=False):
+    def update(self, sensors, mirror=False):
         dpos = self.target - self.body.position
         if dpos.length > 1:                          # Radius of sight
             dpos.Normalize()
@@ -436,10 +434,10 @@ class Boulotron2000(Animatronic):
         else:
             body_angle = (self.bodies[0].angle%(2*pi)) / (2*pi)
         
-        to_nn = [dpos.x, dpos.y] + joint_angles + list_sensors + [body_angle]
+        self.sensors = [dpos.x, dpos.y] + joint_angles + sensors + [body_angle]
         if dpos.x < 0 or mirror:
             # Mirror mode
-            to_nn = [-dpos.x, dpos.y] + joint_angles[::-1] + list_sensors[::-1] + [body_angle]
+            self.sensors = [-dpos.x, dpos.y] + joint_angles[::-1] + sensors[::-1] + [body_angle]
         
         # Send input to neural network
         self.nn.feedforward(to_nn)
@@ -480,13 +478,14 @@ class Boulotron2001(Animatronic):
                  - body_angle
     """
     
-    def __init__(self, world, hidden=[30, 30, 30], activation="tanh"):
+    def __init__(self, world):
+        self.morpho = "Boulotron2001"
         self.n_sensors = 6
-        layers = [2+6+6+1] + hidden + [self.n_sensors]
+        self.n_inputs = 2+6+6+1
         self.nn = NeuralNetwork()
         self.nn.init_weights(layers)
         self.nn.set_activation(activation)
-        self.id = "Boulotron2001"
+        
         super().__init__(world)
     
     
@@ -653,7 +652,7 @@ class Boulotron2001(Animatronic):
     
     
     
-    def update(self, list_sensors, mirror=False):
+    def update(self, sensors, mirror=False):
         dpos = self.target - self.body.position
         if dpos.length > 1:                          # Radius of sight
             dpos.Normalize()
@@ -667,13 +666,14 @@ class Boulotron2001(Animatronic):
         else:
             body_angle = (self.bodies[0].angle%(2*pi)) / (2*pi)
         
-        to_nn = [dpos.x, dpos.y] + joint_angles + list_sensors + [body_angle]
         if dpos.x < 0 or mirror:
             # Mirror mode
-            to_nn = [-dpos.x, dpos.y] + joint_angles[::-1] + list_sensors[::-1] + [body_angle]
+            self.sensors = [-dpos.x, dpos.y] + joint_angles[::-1] + sensors[::-1] + [body_angle]
+        else:
+            self.sensors = [dpos.x, dpos.y] + joint_angles + sensors + [body_angle]
         
         # Send input to neural network
-        self.nn.feedforward(to_nn)
+        self.nn.feedforward(self.sensors)
         
         # Read output from neural network
         if dpos.x < 0 or mirror:

@@ -1,8 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 
-from __future__ import division
 from math import (floor, ceil)
 import pygame
 from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, pi, vec2, queryCallback, AABB)
@@ -96,7 +95,7 @@ class Camera:
         self.body_to_follow = body
     
     def render(self):
-        """ Render every Box2D bodies """
+        """ Render every Box2D bodies on screen's bounding box"""
         if self.follow:
             self.set_target(self.body_to_follow.position)
             self.aabb = AABB(lowerBound=self.center-(self.width/2, self.height/2),
