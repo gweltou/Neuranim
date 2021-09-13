@@ -17,6 +17,10 @@ Apprentissage automatique de la marche pour robots virtuels.
  * END_GEN : nombre de générations au bout duquel la simulation s'interrompra
 
 ### Evolution
+Evolution d'une population d'après les paramètres par défaut
+`python3 evolve.py [-v]`
+
+Reprendre l'évolution d'une population depuis un fichier
 `python3 evolve.py -f genXXX.txt`
 
 Activer le mode présentation:

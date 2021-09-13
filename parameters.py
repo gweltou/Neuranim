@@ -1,6 +1,6 @@
 ANIMATRONIC = "Cubotron1000"   # Possible values: "Cubotron1000", "Boulotron2000", "Boulotron2001"
 ACTIVATION = "tanh"
-HIDDEN_LAYERS = [4]
+HIDDEN_LAYERS = [10, 10]
 
 
 START_POP = 200

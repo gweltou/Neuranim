@@ -19,7 +19,6 @@ from Box2D.b2 import (world, polygonShape, edgeShape, staticBody, dynamicBody, p
 from parameters import *
 
 
-DISPLAY = False
 TARGET_FPS = 60
 TIME_STEP = 1.0 / TARGET_FPS
 SCREEN_WIDTH, SCREEN_HEIGHT = 1000, 600
@@ -49,7 +48,10 @@ def build_nn_coords(nn):
 
 
 class Evolve:
-    def __init__(self):
+    def __init__(self, args):
+        self.args = args
+        self.display_mode = self.args.view
+        
         self.world = world(contactListener=nnContactListener(),
                            gravity=(0, -10),
                            doSleep=True)
@@ -62,11 +64,11 @@ class Evolve:
         ground_fix = ground.CreateEdgeFixture(vertices=[(-50,0), (50,0)],
                                               friction=1.0,
                                               userData='ground')
-        if DISPLAY:
+        if self.display_mode:
             # --- pygame setup ---
             self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT),
                                                   0, 32)
-            pygame.display.set_caption('Neuranim Mutate')
+            pygame.display.set_caption('Neuranim Evolve')
             self.clock = pygame.time.Clock()
             self.camera = Camera(self.world,
                                  self.screen,
@@ -105,8 +107,10 @@ class Evolve:
         for i in range(10):
             offspring.extend([d.copy() for d in new_pool])
         # Mutate the copies
-        for d in offspring:
-            d.mutate()
+        mutation_count = 0
+        for c in offspring:
+            mutation_count += c.mutate(self.args.mutate)
+        print(f" ## number of mutations : {mutation_count}")
         new_pool += offspring
 
         self.generation += 1
@@ -157,7 +161,7 @@ class Evolve:
         mirror = False
         nn_coords = build_nn_coords(creature.nn)
         while running:
-            if DISPLAY:
+            if self.args.view:
                 # Process keyboard events
                 for event in pygame.event.get():
                     if event.type == QUIT:
@@ -183,7 +187,7 @@ class Evolve:
             if SCORE_MIN:
                 score_min = min(score_min, (creature.target - creature.body.position).length)
 
-            if DISPLAY:
+            if self.display_mode:
                 self.screen.fill((0, 0, 0, 0))
 
                 # Set camera center on current creature
@@ -258,7 +262,7 @@ class Evolve:
                             self.stats.savePlot(filename, title)
 
                     print("end of generation {}".format(self.generation))
-                    print("generation score: {}".format(gen_score))
+                    print(" ## generation score: {}".format(gen_score))
                     self.nextGeneration(winners)
 
                     creature = self.pool.pop()
@@ -276,7 +280,7 @@ class Evolve:
 def parseInputs():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('-v', '--view', action='store_true', help='enable presentation mode')
-    parser.add_argument('-m', '--mutate', type=int, help='mutations frequency')
+    parser.add_argument('-m', '--mutate', type=int, default=2, help='mutation frequency multiplier', choices=range(1,6))
     parser.add_argument('-f', '--file', type=str, help='population file')
     return parser.parse_args()
 
@@ -284,9 +288,7 @@ def parseInputs():
 if __name__ == "__main__":
     args = parseInputs()
     
-    DISPLAY = args.view
-    
-    evolve = Evolve()
+    evolve = Evolve(args)
     
     if args.file:
         evolve.importCreatures(args.file)
