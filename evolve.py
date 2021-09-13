@@ -161,7 +161,13 @@ class Evolve:
         mirror = False
         nn_coords = build_nn_coords(creature.nn)
         while running:
+        
+            #### PyGame ####
             if self.args.view:
+                mouse_dx, mouse_dy = pygame.mouse.get_rel()
+                if mouse_dx and pygame.mouse.get_pressed()[0]:
+                    self.camera.move(-mouse_dx*0.006, mouse_dy*0.006)
+                
                 # Process keyboard events
                 for event in pygame.event.get():
                     if event.type == QUIT:
@@ -177,16 +183,18 @@ class Evolve:
                             if not mirror: print('not mirror')
                         elif event.key == K_d:
                             display_nn = not display_nn
-
-            if display_nn:
-                creature.nn.save_state = True
-            else:
-                creature.nn.save_state = False
+                            if display_nn:
+                                creature.nn.save_state = True
+                            else:
+                                creature.nn.save_state = False
+            
             creature.update(self.world.contactListener.sensors[creature.id], mirror)
 
             if SCORE_MIN:
                 score_min = min(score_min, (creature.target - creature.body.position).length)
-
+            
+            
+            #### PyGame ####
             if self.display_mode:
                 self.screen.fill((0, 0, 0, 0))
 
@@ -239,6 +247,8 @@ class Evolve:
                     creature.set_target(target.x, target.y)
                     creature.set_start_position(STARTPOS[0], STARTPOS[1])
                     creature.init_body()
+                    if display_nn:
+                        creature.nn.save_state = True
                     score_min = 100
                 else:
                     # Pool is empty
@@ -293,6 +303,10 @@ if __name__ == "__main__":
     if args.file:
         evolve.importCreatures(args.file)
         evolve.nextGeneration([(d.score, d) for d in evolve.pool])  #TODO: could be simplified
+        if args.view:
+            pygame.display.set_caption('Neuranim Evolve  --  ' + 
+                    evolve.pool[0].pop_id +
+                    f' [{args.file.split(os.path.sep)[-1]}]')
     else:
         evolve.populate(START_POP)
     

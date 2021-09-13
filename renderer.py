@@ -42,8 +42,8 @@ class Camera:
                 
                 screen_left = self.cam.center.x-self.cam.width/2
                 screen_right = self.cam.center.x+self.cam.width/2
-                for i in range(int(floor(screen_left)), int(floor(screen_right))):
-                    topleft = self.cam.world_to_px((i, shape.vertices[0][1]-self.cam.center.y))
+                for i in range(floor(screen_left), ceil(screen_right)):
+                    topleft = self.cam.world_to_px((i-self.cam.center.x, shape.vertices[0][1]-self.cam.center.y))
                     width = ceil(self.cam.HPPM)
                     height = self.cam.SH-p0[1]
                     ### print(topleft, width, height)
@@ -82,6 +82,12 @@ class Camera:
     def set_center(self, pos):
         self.center = pos
         self.follow = False
+        self.aabb = AABB(lowerBound=self.center-(self.width/2, self.height/2),
+                         upperBound=self.center+(self.width/2, self.height/2))
+    
+    def move(self, x, y):
+        self.center[0] += x
+        self.center[1] += y
         self.aabb = AABB(lowerBound=self.center-(self.width/2, self.height/2),
                          upperBound=self.center+(self.width/2, self.height/2))
     
