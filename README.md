@@ -33,7 +33,7 @@ Une mutation peut définir une nouvelle valeur (entre -1 et 1) à un gène ou bi
 ## TODO:
  * Implémenter la nouvelle morphologie (avec perception de l'horizontalité et de la hauteur par rapport au sol)
  * Utiliser des scenarios d'entrainement
- * Texturer le sol
+ * touche 'r', follow en mode présentation
  * Option de sol accidenté
 
 ## Quelques idées:

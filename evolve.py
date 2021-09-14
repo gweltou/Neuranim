@@ -50,6 +50,7 @@ def build_nn_coords(nn):
 class Evolve:
     def __init__(self, args):
         self.args = args
+        
         self.display_mode = self.args.view
         
         self.world = world(contactListener=nnContactListener(),
@@ -58,10 +59,15 @@ class Evolve:
         self.time_init = datetime.time()
         self.pool = []
         self.stats = Stats()
-
+        
+        ### Box2D ###
         # A static body to hold the ground shape
-        ground = self.world.CreateStaticBody()
-        ground_fix = ground.CreateEdgeFixture(vertices=[(-50,0), (50,0)],
+        elevation = 0
+        for x in range(-50, 50):
+            prev_elevation = elevation
+            elevation = prev_elevation + (random.random()-0.5) * self.args.roughness*0.01
+            ground = self.world.CreateStaticBody()
+            ground_fix = ground.CreateEdgeFixture(vertices=[(x,prev_elevation), (x+1,elevation)],
                                               friction=1.0,
                                               userData='ground')
         if self.display_mode:
@@ -110,7 +116,7 @@ class Evolve:
         mutation_count = 0
         for c in offspring:
             mutation_count += c.mutate(self.args.mutate)
-        print(f" ## number of mutations : {mutation_count}")
+        print(f" ## total number of mutations : {mutation_count}")
         new_pool += offspring
 
         self.generation += 1
@@ -169,6 +175,11 @@ class Evolve:
                     self.camera.move(-mouse_dx*0.006, mouse_dy*0.006)
                 
                 # Process keyboard events
+                # 'q' or 'ESC'  Quit
+                # 'k'   next creature (kill)
+                # 'm'   mirror mode
+                # 'd'   show neural network
+                # 'c'   center on creature and follow //TODO
                 for event in pygame.event.get():
                     if event.type == QUIT:
                         running = False
@@ -200,7 +211,7 @@ class Evolve:
 
                 # Set camera center on current creature
                 # A little bit above the subject
-                #self.camera.set_target(creature.body.position+vec2(0.0,0.1)) # Ground texturing not working
+                self.camera.set_target(creature.body.position+vec2(0.0,0.1))
                 self.camera.render()
 
                 if display_nn:
@@ -290,13 +301,16 @@ class Evolve:
 def parseInputs():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('-v', '--view', action='store_true', help='enable presentation mode')
-    parser.add_argument('-m', '--mutate', type=int, default=2, help='mutation frequency multiplier', choices=range(1,6))
+    parser.add_argument('-m', '--mutate', type=int, default=2,
+                        help='mutation frequency multiplier', choices=range(1,10))
     parser.add_argument('-f', '--file', type=str, help='population file')
+    parser.add_argument('-r', '--roughness', type=int, default=1, help='terrain variation in elevation')
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parseInputs()
+    print(args)
     
     evolve = Evolve(args)
     
