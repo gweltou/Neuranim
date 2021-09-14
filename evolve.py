@@ -211,7 +211,7 @@ class Evolve:
 
                 # Set camera center on current creature
                 # A little bit above the subject
-                self.camera.set_target(creature.body.position+vec2(0.0,0.1))
+                self.camera.set_target(creature.body.position+vec2(0.0,0.2))
                 self.camera.render()
 
                 if display_nn:
@@ -241,7 +241,7 @@ class Evolve:
 
             self.world.Step(TIME_STEP, 6, 2)
             steps += 1
-            if steps >= MAX_STEPS or not creature.body.awake or creature.body.position.y < 0:
+            if steps >= MAX_STEPS or not creature.body.awake:
                 # End of trial for this creature
                 steps = 0
                 score = (creature.target - creature.body.position).length
@@ -304,7 +304,7 @@ def parseInputs():
     parser.add_argument('-m', '--mutate', type=int, default=2,
                         help='mutation frequency multiplier', choices=range(1,10))
     parser.add_argument('-f', '--file', type=str, help='population file')
-    parser.add_argument('-r', '--roughness', type=int, default=1, help='terrain variation in elevation')
+    parser.add_argument('-r', '--roughness', type=int, default=20, help='terrain variation in elevation')
     return parser.parse_args()
 
 
