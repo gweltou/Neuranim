@@ -61,15 +61,11 @@ class Evolve:
         self.stats = Stats()
         
         ### Box2D ###
-        # A static body to hold the ground shape
-        elevation = 0
-        for x in range(-50, 50):
-            prev_elevation = elevation
-            elevation = prev_elevation + (random.random()-0.5) * self.args.roughness*0.01
-            ground = self.world.CreateStaticBody()
-            ground_fix = ground.CreateEdgeFixture(vertices=[(x,prev_elevation), (x+1,elevation)],
-                                              friction=1.0,
-                                              userData='ground')
+        self.build_ground()
+        
+        self.target = vec2(TARGET) #vec2(random.choice(TARGETS))
+        self.display_nn = False
+        
         if self.display_mode:
             # --- pygame setup ---
             self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT),
@@ -81,7 +77,25 @@ class Evolve:
                                  18.0,
                                  18.0*SCREEN_HEIGHT/SCREEN_WIDTH)
 
-
+    
+    def build_ground(self):
+        # A static body to hold the ground shape
+        elevation = 0
+        if hasattr(self, 'ground'):
+            self.world.DestroyBody(self.ground)
+        self.ground = self.world.CreateStaticBody()
+        start_posx = round(STARTPOS[0])
+        assert -50 < start_posx < 50, "Starting position should be between -50 and 50"
+        for x in range(-50, 50):
+            prev_elevation = elevation
+            elevation = prev_elevation + (random.random()-0.5) * self.args.roughness*0.01
+            self.ground.CreateEdgeFixture(vertices=[(x,prev_elevation), (x+1,elevation)],
+                                              friction=1.0,
+                                              userData='ground')
+            if x == start_posx:
+                self.startpos_elevation = prev_elevation
+    
+    
     def populate(self, n):
         """
             Create generation 0
@@ -102,7 +116,10 @@ class Evolve:
         print("Layers {}".format(self.pool[0].nn.get_layers()))
 
 
-    def nextGeneration(self, winners):
+    def next_generation(self, winners):
+        """
+            Fill the pool of creatures with the next generation
+        """
         #TODO: could be simplified
         
         # Add previous generation winners to new pool
@@ -124,7 +141,7 @@ class Evolve:
         print("New pool of {} drones".format(len(self.pool)))
 
 
-    def saveCreatures(self, population):
+    def save_population(self, population):
         c = population[0][1]
         directory = self.get_path(c)
         if not os.path.exists(directory):
@@ -134,7 +151,7 @@ class Evolve:
                        self.stats.var_dict, self.generation)
 
 
-    def importCreatures(self, filename):
+    def load_population(self, filename):
         data = import_generation(filename, self.world)
         self.pool = data["population"]
         self.generation = data["generation"]
@@ -153,19 +170,26 @@ class Evolve:
             c.morpho.lower()+'_'+str(c.nn.get_total_neurons()), c.pop_id.lower())
     
     
-    def mainLoop(self):
-        target = vec2(TARGET) #vec2(random.choice(TARGETS))
-        podium = []
+    def pop_creature(self):
         creature = self.pool.pop()
-        creature.set_start_position(STARTPOS[0], STARTPOS[1])
-        creature.set_target(target.x, target.y)
+        creature.set_start_position(STARTPOS[0], STARTPOS[1] + self.startpos_elevation)
+        # Choose a new target
+        self.target = vec2(TARGET)  # vec2(random.choice(TARGETS))
+        creature.set_target(self.target.x, self.target.y)
         creature.init_body()
-        score_min = 100
+        if self.display_nn:
+            creature.nn.save_state = True
+        self.score_min = 100
+        return creature
+        
+        
+    def mainLoop(self):
+        podium = []
+        creature = self.pop_creature()
         steps = 0
-        display_nn = False
-        running = True
         mirror = False
         nn_coords = build_nn_coords(creature.nn)
+        running = True
         while running:
         
             #### PyGame ####
@@ -187,23 +211,19 @@ class Evolve:
                         if event.key == K_ESCAPE or event.key == K_q:
                             running = False
                         if event.key == K_k:
-                            steps = MAX_STEPS - 10
+                            steps = self.args.limit_steps - 10
                         elif event.key == K_m:
                             mirror = not mirror
                             if mirror: print('mirror')
                             if not mirror: print('not mirror')
                         elif event.key == K_d:
-                            display_nn = not display_nn
-                            if display_nn:
+                            self.display_nn = not self.display_nn
+                            if self.display_nn:
                                 creature.nn.save_state = True
                             else:
                                 creature.nn.save_state = False
             
             creature.update(self.world.contactListener.sensors[creature.id], mirror)
-
-            if SCORE_MIN:
-                score_min = min(score_min, (creature.target - creature.body.position).length)
-            
             
             #### PyGame ####
             if self.display_mode:
@@ -214,7 +234,7 @@ class Evolve:
                 self.camera.set_target(creature.body.position+vec2(0.0,0.2))
                 self.camera.render()
 
-                if display_nn:
+                if self.display_nn:
                     white = (255, 255, 255)
                     for j in range(len(nn_coords)-1):
                         for i in range(len(nn_coords[j])):
@@ -241,57 +261,42 @@ class Evolve:
 
             self.world.Step(TIME_STEP, 6, 2)
             steps += 1
-            if steps >= MAX_STEPS or not creature.body.awake:
+            if steps >= self.args.limit_steps or not creature.body.awake:
                 # End of trial for this creature
                 steps = 0
                 score = (creature.target - creature.body.position).length
-                if SCORE_MIN:
-                    score = score_min
                 podium.append((score, creature,))
                 creature.destroy()
 
                 if len(self.pool) > 0:
                     # Evaluate next creature in pool
-                    creature = self.pool.pop()
-                    # choose a new target
-                    target = vec2(TARGET) ###vec2(random.choice(TARGETS))
-                    creature.set_target(target.x, target.y)
-                    creature.set_start_position(STARTPOS[0], STARTPOS[1])
-                    creature.init_body()
-                    if display_nn:
-                        creature.nn.save_state = True
-                    score_min = 100
+                    creature = self.pop_creature()
                 else:
                     # Pool is empty
                     if not BREED:
                         running = False
                         break
-
+                    
                     gen_score = sum([l[0] for l in podium]) / len(podium)
                     podium.sort(key=lambda x: x[0])
                     winners = podium[:WINNERS_PER_GENERATION]
                     podium.clear()
                     self.stats.feed(self.generation, gen_score, winners[0][0], winners[-1][0])
                     # Save winners to file every 10 generations
-                    if self.generation > 1 and self.generation%10 == 0:
-                        self.saveCreatures(winners)
+                    if self.generation > 1 and self.generation%self.args.save_interval == 0:
+                        self.save_population(winners)
                         if PLOT_EVOLUTION:
                             c = winners[0][1]
                             filename = "gen{}.png".format(self.generation)
                             filename = os.path.join(self.get_path(c), filename)
                             title = "{} {}".format(c.pop_id, str(c.nn.get_layers()))
                             self.stats.savePlot(filename, title)
-
                     print("end of generation {}".format(self.generation))
                     print(" ## generation score: {}".format(gen_score))
-                    self.nextGeneration(winners)
-
-                    creature = self.pool.pop()
-                    target = vec2(TARGET)# vec2(random.choice(TARGETS))
-                    creature.set_target(target.x, target.y)
-                    creature.set_start_position(STARTPOS[0], STARTPOS[1])
-                    creature.init_body()
-                    score_min = 100
+                    
+                    self.build_ground() # Change ground topology
+                    self.next_generation(winners)
+                    creature = self.pop_creature()
 
                 if self.generation > END_GEN:
                     running = False
@@ -302,21 +307,27 @@ def parseInputs():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('-v', '--view', action='store_true', help='enable presentation mode')
     parser.add_argument('-m', '--mutate', type=int, default=2,
-                        help='mutation frequency multiplier', choices=range(1,10))
+                        help='mutation frequency multiplier (defaults to 2)')
     parser.add_argument('-f', '--file', type=str, help='population file')
-    parser.add_argument('-r', '--roughness', type=int, default=20, help='terrain variation in elevation')
+    parser.add_argument('-r', '--roughness', type=int, default=30, help='terrain variation in elevation (in percent)')
+    parser.add_argument('-s', '--save_interval', type=int, default=10, help='save population to disk every X generations')
+    parser.add_argument('-l', '--limit_steps', type=int, default=500, help='max number of steps for each individual trial')
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parseInputs()
-    print(args)
+    #print(args)
+    args.mutate = max(1, args.mutate)
+    args.roughness = max(0, args.roughness)
+    args.save_interval = max(1, args.save_interval)
+    args.limit_steps = max(50, args.limit_steps)
     
     evolve = Evolve(args)
     
     if args.file:
-        evolve.importCreatures(args.file)
-        evolve.nextGeneration([(d.score, d) for d in evolve.pool])  #TODO: could be simplified
+        evolve.load_population(args.file)
+        evolve.next_generation([(d.score, d) for d in evolve.pool])  #TODO: could be simplified
         if args.view:
             pygame.display.set_caption('Neuranim Evolve  --  ' + 
                     evolve.pool[0].pop_id +

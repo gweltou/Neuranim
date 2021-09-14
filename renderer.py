@@ -40,7 +40,7 @@ class Camera(queryCallback):
             color = (160, 160, 160, 255)
             # Check if it is a sensor
             if isinstance(fixture.userData, tuple):
-                color = (255, 255, 255, 255)
+                color = (200, 200, 200, 255)
                 if self.world.contactListener.sensors[fixture.userData[0]][fixture.userData[1]] == True:
                     color = (0, 255, 0, 255)
             # TODO: replace with pygame.draw.ellipse()
@@ -105,10 +105,10 @@ class Camera(queryCallback):
         for i in range(floor(cam_left), ceil(cam_right)):
             px_x = (i-self.center.x+self.width/2) * self.HPPM
             if i%2 == 1:
-                pygame.draw.rect(self.screen, (200, 200, 200, 10),
+                pygame.draw.rect(self.screen, (235, 235, 255, 255),
                                  ((px_x, 0), (meter, self.screen_height)))
             else:
-                pygame.draw.rect(self.screen, (220, 220, 220, 10),
+                pygame.draw.rect(self.screen, (225, 225, 245, 255),
                                  ((px_x, 0), (meter, self.screen_height)))
         
         # Render Box2D World
