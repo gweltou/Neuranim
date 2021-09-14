@@ -20,8 +20,9 @@ Apprentissage automatique de la marche pour robots virtuels.
 
 ### Evolution
 Usage:
-`python3 evolve.py -h`
-`usage: evolve.py [-h] [-v] [-m MUTATE] [-f FILE] [-r ROUGHNESS]
+```
+$ python3 evolve.py -h
+usage: evolve.py [-h] [-v] [-m MUTATE] [-f FILE] [-r ROUGHNESS]
                  [-s SAVE_INTERVAL] [-l LIMIT_STEPS]
 
 optional arguments:
@@ -36,15 +37,18 @@ optional arguments:
                         save population to disk every X generations
   -l LIMIT_STEPS, --limit_steps LIMIT_STEPS
                         max number of steps for each individual trial
-`
+```
 
 Evolution d'une population d'après les paramètres par défaut
+
 `python3 evolve.py [-v]`
 
 Reprendre l'évolution d'une population depuis un fichier
+
 `python3 evolve.py -f genXXX.txt`
 
 Activer le mode présentation:
+
 `python3 evolve.py -f genXXX.txt -v`
 
 ## Types de mutations
@@ -55,7 +59,6 @@ Une mutation peut définir une nouvelle valeur (entre -1 et 1) à un gène ou bi
  * Implémenter la nouvelle morphologie (avec perception de l'horizontalité et de la hauteur par rapport au sol)
  * Utiliser des scenarios d'entrainement
  * touche 'r', follow en mode présentation
- * Option de sol accidenté
 
 ## Quelques idées:
  * Tester réseau neuronal qui s'actualise d'une couche à la fois (pour un RN de x couches intermédiaires, il faudra donc x+1 pas pour le traverser entièrement)
