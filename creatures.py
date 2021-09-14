@@ -45,18 +45,21 @@ class Animatronic(object):
         duplicate.pop_id = self.pop_id
         return duplicate
     
-    def mutate(self):
+    def mutate(self, frequency=2):
         total_synapses = self.nn.get_total_synapses()
+        mutation_count = 0
         for w in self.nn.weights:
             wf = w.flat
             for i in range(w.size):
-                if np.random.randint(total_synapses//2) == 0:
+                if np.random.randint(total_synapses//frequency) == 0:
+                    mutation_count += 1
                     # Another random weight between -1 and 1
                     r = np.random.random()*2 - 1.0
                     # Deactivate synapse if close enough to 0
                     if abs(r) < 0.02: r = 0
                     # Keep deactivated
                     if wf[i] != 0: wf[i] = r
+        return mutation_count
     
     def destroy(self):
         for joint in self.joints:
