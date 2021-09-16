@@ -6,6 +6,7 @@ import os.path
 import argparse
 import datetime
 import random
+import re
 import numpy as np
 import pygame
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_LEFT, K_RIGHT, K_UP, K_DOWN, K_k, K_m, K_d, K_q
@@ -88,7 +89,7 @@ class Evolve:
         assert -50 < start_posx < 50, "Starting position should be between -50 and 50"
         for x in range(-50, 50):
             prev_elevation = elevation
-            elevation = prev_elevation + (random.random()-0.5) * self.args.roughness*0.01
+            elevation = prev_elevation + (random.random()-0.5) * self.args.terrain_roughness*0.01
             self.ground.CreateEdgeFixture(vertices=[(x,prev_elevation), (x+1,elevation)],
                                               friction=1.0,
                                               userData='ground')
@@ -96,24 +97,24 @@ class Evolve:
                 self.startpos_elevation = prev_elevation
     
     
-    def populate(self, n):
+    def populate(self):
         """
             Create generation 0
         """
         creature_class = getattr(creatures, ANIMATRONIC)
-        for i in range(n):
+        for i in range(args.pool_size):
             c = creature_class(self.world)
             c.pop_id = FancyWords.generate_two()
             nn = NeuralNetwork()
             layers = [c.n_inputs] + HIDDEN_LAYERS + [c.n_sensors]
-            nn.init_weights(layers)
+            nn.init_weights(layers) # Set random weights
             nn.set_activation(ACTIVATION)
             c.nn = nn   # Link neural netword to body
             self.pool.append(c)
         
         self.generation = 0
-        print("Starting from generation 0   ({})".format(ANIMATRONIC))
         print("Layers {}".format(self.pool[0].nn.get_layers()))
+        print("Starting from generation 0   ({})".format(ANIMATRONIC))
 
 
     def next_generation(self, winners):
@@ -123,25 +124,25 @@ class Evolve:
         #TODO: could be simplified
         
         # Add previous generation winners to new pool
-        new_pool = [w[1] for w in winners]
-        # Add winners offspring to new pool
+        parents = [w[1] for w in winners]
+        # Make copies of every winner
         offspring = []
-        # Make 10 copies of every winner
-        for i in range(10):
-            offspring.extend([d.copy() for d in new_pool])
+        num_copies = round((args.pool_size/len(winners)) - 1)
+        for i in range(num_copies):
+            offspring.extend([d.copy() for d in parents])
         # Mutate the copies
         mutation_count = 0
         for c in offspring:
             mutation_count += c.mutate(self.args.mutate)
-        print(f" ## total number of mutations : {mutation_count}")
-        new_pool += offspring
-
+        
+        self.pool = offspring + parents
         self.generation += 1
-        self.pool = new_pool
-        print("New pool of {} drones".format(len(self.pool)))
+        print(f"# New pool of {len(self.pool)} drones")
+        print(f"    Total number of mutations: {mutation_count}")
 
 
     def save_population(self, population):
+        print("Saving to disk...")
         c = population[0][1]
         directory = self.get_path(c)
         if not os.path.exists(directory):
@@ -152,17 +153,26 @@ class Evolve:
 
 
     def load_population(self, filename):
+        if os.path.isdir(filename):
+            p = re.compile(r'gen(\d+).txt' ,re.IGNORECASE)
+            highest_gen = 0
+            for f in os.listdir(filename):
+                m = p.match(f)
+                if m and int(m[1]) > highest_gen:
+                    highest_gen = int(m[1])
+            filename = os.path.join(filename, f'gen{highest_gen}.txt')
+        
         data = import_generation(filename, self.world)
         self.pool = data["population"]
         self.generation = data["generation"]
         self.stats.reset()
         if "stats" in data:
             self.stats.var_dict = data["stats"]
-        print("Starting from generation {}".format(self.generation))
         print('Population "{}"'.format(self.pool[0].pop_id))
-        print("{} drones imported".format(len(self.pool)))
         print("layers (input+hidden+output): {}".format(self.pool[0].nn.get_layers()))
         print("activation: {}".format(self.pool[0].nn.activation))
+        print("{} drones imported".format(len(self.pool)))
+        print("Starting from generation {}".format(self.generation))
     
     
     def get_path(self, c):
@@ -279,10 +289,11 @@ class Evolve:
                     
                     gen_score = sum([l[0] for l in podium]) / len(podium)
                     podium.sort(key=lambda x: x[0])
-                    winners = podium[:WINNERS_PER_GENERATION]
+                    winners_number = int(len(podium) * args.winners_percent/100)
+                    winners = podium[:winners_number]
                     podium.clear()
                     self.stats.feed(self.generation, gen_score, winners[0][0], winners[-1][0])
-                    # Save winners to file every 10 generations
+                    # Save winners to file every X generations
                     if self.generation > 1 and self.generation%self.args.save_interval == 0:
                         self.save_population(winners)
                         if PLOT_EVOLUTION:
@@ -291,15 +302,17 @@ class Evolve:
                             filename = os.path.join(self.get_path(c), filename)
                             title = "{} {}".format(c.pop_id, str(c.nn.get_layers()))
                             self.stats.savePlot(filename, title)
-                    print("end of generation {}".format(self.generation))
-                    print(" ## generation score: {}".format(gen_score))
+                    print(f"    Generation score: {gen_score}")
+                    print(f"    {len(winners)} creatures selected")
+                    print(f"# End of generation {self.generation}")
                     
-                    self.build_ground() # Change ground topology
-                    self.next_generation(winners)
-                    creature = self.pop_creature()
+                    if self.generation >= args.end_generation:
+                        running = False
+                    else:
+                        self.build_ground() # Change ground topology
+                        self.next_generation(winners)
+                        creature = self.pop_creature()
 
-                if self.generation > END_GEN:
-                    running = False
 
 
 
@@ -309,9 +322,12 @@ def parseInputs():
     parser.add_argument('-m', '--mutate', type=int, default=2,
                         help='mutation frequency multiplier (defaults to 2)')
     parser.add_argument('-f', '--file', type=str, help='population file')
-    parser.add_argument('-r', '--roughness', type=int, default=30, help='terrain variation in elevation (in percent)')
+    parser.add_argument('-r', '--terrain_roughness', type=int, default=30, help='terrain variation in elevation (in percent)')
     parser.add_argument('-s', '--save_interval', type=int, default=10, help='save population to disk every X generations')
-    parser.add_argument('-l', '--limit_steps', type=int, default=500, help='max number of steps for each individual trial')
+    parser.add_argument('-l', '--limit_steps', type=int, default=500, help='max number of steps for each individual trial (defaults to 500)')
+    parser.add_argument('-n', '--pool_size', type=int, default=200, help='size of creature population (defaults to 200)')
+    parser.add_argument('-w', '--winners_percent', type=int, default=10, help='percent of selected individuals per generation')
+    parser.add_argument('-e', '--end_generation', type=int, default=500, help='limit simulation to this number of generations (defaults to 500)')
     return parser.parse_args()
 
 
@@ -319,11 +335,15 @@ if __name__ == "__main__":
     args = parseInputs()
     #print(args)
     args.mutate = max(1, args.mutate)
-    args.roughness = max(0, args.roughness)
+    args.terrain_roughness = max(0, args.terrain_roughness)
     args.save_interval = max(1, args.save_interval)
     args.limit_steps = max(50, args.limit_steps)
+    args.winners_percent = min(100, max(1, args.winners_percent))
     
     evolve = Evolve(args)
+    print("Parameters :")
+    for k,v in args.__dict__.items():
+        print(f"  {k}: {v}")
     
     if args.file:
         evolve.load_population(args.file)
@@ -333,7 +353,7 @@ if __name__ == "__main__":
                     evolve.pool[0].pop_id +
                     f' [{args.file.split(os.path.sep)[-1]}]')
     else:
-        evolve.populate(START_POP)
+        evolve.populate()
     
     evolve.mainLoop()
     
