@@ -56,9 +56,8 @@ Une mutation peut définir une nouvelle valeur (entre -1 et 1) à un gène ou bi
 ## TODO:
  * Améliorer la représentation graphique du réseau neuronal
  * Implémenter la nouvelle morphologie (avec perception de l'horizontalité et de la hauteur par rapport au sol)
- * Mode présentation : touche "slow-motion"
+ * Entrainer à sauter
  * Mode présentation : touche "pause"
- * Mode présentation : touche "follow"
  * Mode présentation : touche "screenshot", placer l'image dans le rép de la population
  * Utiliser des scenarios d'entrainement
 

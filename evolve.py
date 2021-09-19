@@ -9,7 +9,7 @@ import random
 import re
 import numpy as np
 import pygame
-from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_LEFT, K_RIGHT, K_UP, K_DOWN, K_k, K_m, K_d, K_q
+from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_LEFT, K_RIGHT, K_UP, K_DOWN, K_k, K_m, K_d, K_q, K_f, K_s
 from nn import *
 import creatures
 from renderer import Camera
@@ -66,11 +66,11 @@ class Evolve:
         
         self.target = vec2(TARGET) #vec2(random.choice(TARGETS))
         self.display_nn = False
+        self.speed_multiplier = 1.0
         
         if self.display_mode:
             # --- pygame setup ---
-            self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT),
-                                                  0, 32)
+            self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
             pygame.display.set_caption('Neuranim Evolve')
             self.clock = pygame.time.Clock()
             self.camera = Camera(self.world,
@@ -187,9 +187,11 @@ class Evolve:
         self.target = vec2(TARGET)  # vec2(random.choice(TARGETS))
         creature.set_target(self.target.x, self.target.y)
         creature.init_body()
-        if self.display_nn:
-            creature.nn.save_state = True
         self.score_min = 100
+        if self.display_mode:
+            self.nn_coords = build_nn_coords(creature.nn)
+            if self.display_nn:
+                creature.nn.save_state = True
         return creature
         
         
@@ -198,7 +200,6 @@ class Evolve:
         creature = self.pop_creature()
         steps = 0
         mirror = False
-        nn_coords = build_nn_coords(creature.nn)
         running = True
         while running:
         
@@ -213,64 +214,67 @@ class Evolve:
                 # 'k'   next creature (kill)
                 # 'm'   mirror mode
                 # 'd'   show neural network
-                # 'c'   center on creature and follow //TODO
+                # 'f'   center on creature and follow
+                # 's'   slow motion
                 for event in pygame.event.get():
                     if event.type == QUIT:
                         running = False
                     if event.type == KEYDOWN:
                         if event.key == K_ESCAPE or event.key == K_q:
                             running = False
-                        if event.key == K_k:
+                        elif event.key == K_k:    # Kill
                             steps = self.args.limit_steps - 10
-                        elif event.key == K_m:
+                        elif event.key == K_m:  # Mirror
                             mirror = not mirror
                             if mirror: print('mirror')
                             if not mirror: print('not mirror')
-                        elif event.key == K_d:
+                        elif event.key == K_d:  # Display Neural Network
                             self.display_nn = not self.display_nn
                             if self.display_nn:
                                 creature.nn.save_state = True
                             else:
                                 creature.nn.save_state = False
+                        elif event.key == K_f:
+                            self.camera.follow(creature)
+                        elif event.key == K_s:  # Slow motion
+                            if self.speed_multiplier == 1.0:
+                                self.speed_multiplier = 0.1
+                            else:
+                                self.speed_multiplier = 1.0
+                            
             
             creature.update(self.world.contactListener.sensors[creature.id], mirror)
             
             #### PyGame ####
             if self.display_mode:
-                self.screen.fill((0, 0, 0, 0))
-
-                # Set camera center on current creature
-                # A little bit above the subject
-                self.camera.set_target(creature.body.position+vec2(0.0,0.2))
                 self.camera.render()
 
                 if self.display_nn:
                     white = (255, 255, 255)
-                    for j in range(len(nn_coords)-1):
-                        for i in range(len(nn_coords[j])):
-                            for w in range(len(nn_coords[j+1])):
-                                p1 = nn_coords[j][i]
-                                p2 = nn_coords[j+1][w]
+                    for j in range(len(self.nn_coords)-1):
+                        for i in range(len(self.nn_coords[j])):
+                            for w in range(len(self.nn_coords[j+1])):
+                                p1 = self.nn_coords[j][i]
+                                p2 = self.nn_coords[j+1][w]
                                 neuron_value = creature.nn.state[j][i]
                                 weight_value = creature.nn.weights[j][i][w]
                                 if weight_value * neuron_value:
-                                    pygame.draw.line(self.screen, white, p1, p2, 1)
-                    for layer_num in range(len(nn_coords)):
-                        for neuron_num in range(len(nn_coords[layer_num])):
-                            x, y = nn_coords[layer_num][neuron_num]
+                                    width = int(round(abs(weight_value)*4))
+                                    pygame.draw.line(self.screen, white, p1, p2, width)
+                    for layer_num in range(len(self.nn_coords)):
+                        for neuron_num in range(len(self.nn_coords[layer_num])):
+                            x, y = self.nn_coords[layer_num][neuron_num]
                             neuron_value = creature.nn.state[layer_num][neuron_num]
                             green = round(max(0, neuron_value) * 255)
                             red = round(abs(min(0, neuron_value)) * 255)
                             color = (red, green, 0)
                             pygame.draw.circle(self.screen, color, (x, y), 8)
 
-
                 pygame.display.flip()
                 self.clock.tick(TARGET_FPS)
 
-
-            self.world.Step(TIME_STEP, 6, 2)
-            steps += 1
+            self.world.Step(TIME_STEP*self.speed_multiplier, 6, 2)
+            steps += 1 * self.speed_multiplier
             if steps >= self.args.limit_steps or not creature.body.awake:
                 # End of trial for this creature
                 steps = 0
@@ -325,7 +329,7 @@ def parseInputs():
     parser.add_argument('-r', '--terrain_roughness', type=int, default=30, help='terrain variation in elevation (in percent)')
     parser.add_argument('-s', '--save_interval', type=int, default=10, help='save population to disk every X generations')
     parser.add_argument('-l', '--limit_steps', type=int, default=500, help='max number of steps for each individual trial (defaults to 500)')
-    parser.add_argument('-n', '--pool_size', type=int, default=200, help='size of creature population (defaults to 200)')
+    parser.add_argument('-p', '--pool_size', type=int, default=200, help='size of creature population (defaults to 200)')
     parser.add_argument('-w', '--winners_percent', type=int, default=10, help='percent of selected individuals per generation')
     parser.add_argument('-e', '--end_generation', type=int, default=500, help='limit simulation to this number of generations (defaults to 500)')
     return parser.parse_args()

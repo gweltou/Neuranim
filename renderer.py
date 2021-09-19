@@ -23,7 +23,7 @@ class Camera(queryCallback):
         self.center = vec2(center)
         self.aabb = AABB(lowerBound=self.center-(self.width/2, self.height/2),
                          upperBound=self.center+(self.width/2, self.height/2))
-        self.follow = False
+        self.following = False
         queryCallback.__init__(self)
     
     
@@ -69,7 +69,7 @@ class Camera(queryCallback):
     
     def set_center(self, pos):
         self.center = pos
-        self.follow = False
+        #self.following = False
         self.aabb = AABB(lowerBound=self.center-(self.width/2, self.height/2),
                          upperBound=self.center+(self.width/2, self.height/2))
     
@@ -79,19 +79,19 @@ class Camera(queryCallback):
         self.center[1] += y
         self.aabb = AABB(lowerBound=self.center-(self.width/2, self.height/2),
                          upperBound=self.center+(self.width/2, self.height/2))
+        self.following = False
     
     def set_target(self, pos):
         self.set_center(self.center + (pos-self.center)/10)
     
-    def follow(self, body):
+    def follow(self, creature):
         """ Auto-update self.center on a given Box2D body position """
-        ### NOT WORKING YET
-        self.follow = True
-        self.body_to_follow = body
+        self.following = True
+        self.body_to_follow = creature.body
     
     def render(self):
         """ Render every Box2D bodies on screen's bounding box"""
-        if self.follow:
+        if self.following and self.body_to_follow:
             self.set_target(self.body_to_follow.position)
             self.aabb = AABB(lowerBound=self.center-(self.width/2, self.height/2),
                          upperBound=self.center+(self.width/2, self.height/2))
@@ -113,4 +113,5 @@ class Camera(queryCallback):
         
         # Render Box2D World
         self.world.QueryAABB(self, self.aabb)
+        #pygame.draw.rect(self.screen
         
