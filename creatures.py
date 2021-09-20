@@ -18,7 +18,6 @@ class Animatronic(object):
         self.id = uuid.uuid1().fields[0]
         self.world = world
         self.score = 0
-        #self.keeper = False
         self.sensors = []
     
     def set_start_position(self, x, y):
@@ -71,7 +70,6 @@ class Animatronic(object):
 
 
 
-
 class Cubotron1000(Animatronic):
     """"
          Neural network input layer:
@@ -91,7 +89,7 @@ class Cubotron1000(Animatronic):
     def __init__(self, world):
         super().__init__(world)
         self.morpho = "Cubotron1000"
-        self.n_sensors = 4
+        self.n_contact_sensors = 4
         self.n_inputs = 2+4+4
         
     
@@ -154,7 +152,7 @@ class Cubotron1000(Animatronic):
         self.bodies.append(self.lfoot)
         self.bodies.append(self.rfoot)
         
-        self.world.contactListener.registerSensors(self.id, self.n_sensors)
+        self.world.contactListener.registerSensors(self.id, self.n_contact_sensors)
         
         self.joints = []
         self.joints.append(
@@ -242,9 +240,8 @@ class Cubotron1001(Cubotron1000):
     """
     
     def __init__(self, world):
-        super().__init
+        super().__init__(world)
         self.morpho = "Cubotron1001"
-        self.n_sensors += 1
         self.n_inputs += 1
     
     
@@ -298,10 +295,10 @@ class Boulotron2000(Animatronic):
     """
     
     def __init__(self, world):
-        self.morpho = "Boulotron2000"
-        self.n_sensors = 6
-        self.n_inputs = 2+6+6+1
         super().__init__(world)
+        self.morpho = "Boulotron2000"
+        self.n_contact_sensors = 6
+        self.n_inputs = 2+6+6+1
     
     
     def init_body(self):
@@ -389,7 +386,7 @@ class Boulotron2000(Animatronic):
                                        userData = (self.id, 5), groupIndex=-1)
         
         # Contact sensors
-        self.world.contactListener.registerSensors(self.id, self.n_sensors)
+        self.world.contactListener.registerSensors(self.id, self.n_contact_sensors)
         
         self.joints = []
         self.joints.append(
@@ -525,7 +522,7 @@ class Boulotron2001(Animatronic):
     
     def __init__(self, world):
         self.morpho = "Boulotron2001"
-        self.n_sensors = 6
+        self.n_contact_sensors = 6
         self.n_inputs = 2+6+6+1
         super().__init__(world)
     
@@ -615,7 +612,7 @@ class Boulotron2001(Animatronic):
                                        userData = (self.id, 5), groupIndex=-1)
         
         # Contact sensors
-        self.world.contactListener.registerSensors(self.id, self.n_sensors)
+        self.world.contactListener.registerSensors(self.id, self.n_contact_sensors)
         
         self.joints = []
         self.joints.append(

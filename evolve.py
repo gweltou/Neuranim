@@ -9,7 +9,7 @@ import random
 import re
 import numpy as np
 import pygame
-from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_LEFT, K_RIGHT, K_UP, K_DOWN, K_k, K_m, K_d, K_q, K_f, K_s
+from pygame.locals import *
 from nn import *
 import creatures
 from renderer import Camera
@@ -44,7 +44,6 @@ def build_nn_coords(nn):
         coords.append(l_coords)
         x += x_step
     return coords
-
 
 
 
@@ -106,7 +105,7 @@ class Evolve:
             c = creature_class(self.world)
             c.pop_id = FancyWords.generate_two()
             nn = NeuralNetwork()
-            layers = [c.n_inputs] + HIDDEN_LAYERS + [c.n_sensors]
+            layers = [c.n_inputs] + HIDDEN_LAYERS + [c.n_contact_sensors]
             nn.init_weights(layers) # Set random weights
             nn.set_activation(ACTIVATION)
             c.nn = nn   # Link neural netword to body
@@ -142,13 +141,13 @@ class Evolve:
 
 
     def save_population(self, population):
-        print("Saving to disk...")
         c = population[0][1]
         directory = self.get_path(c)
         if not os.path.exists(directory):
             os.makedirs(directory)
-        filename = "gen{}.txt".format(self.generation)
-        save_generation(os.path.join(directory, filename), population,
+        filename = os.path.join(directory, "gen{}.txt".format(self.generation))
+        print(f"Saving to disk... ({filename})")
+        save_generation(filename, population,
                        self.stats.var_dict, self.generation)
 
 
@@ -190,8 +189,7 @@ class Evolve:
         self.score_min = 100
         if self.display_mode:
             self.nn_coords = build_nn_coords(creature.nn)
-            if self.display_nn:
-                creature.nn.save_state = True
+            creature.nn.save_state = True   # Used when displaying nn structure
         return creature
         
         
@@ -200,15 +198,15 @@ class Evolve:
         creature = self.pop_creature()
         steps = 0
         mirror = False
+        mouse_drag = False
+        selected_neuron = None
+        show_downstream = False
+        paused = False
         running = True
         while running:
         
             #### PyGame ####
             if self.args.view:
-                mouse_dx, mouse_dy = pygame.mouse.get_rel()
-                if mouse_dx and pygame.mouse.get_pressed()[0]:
-                    self.camera.move(-mouse_dx*0.006, mouse_dy*0.006)
-                
                 # Process keyboard events
                 # 'q' or 'ESC'  Quit
                 # 'k'   next creature (kill)
@@ -216,10 +214,31 @@ class Evolve:
                 # 'd'   show neural network
                 # 'f'   center on creature and follow
                 # 's'   slow motion
+                # 'p'   pause
+                # 'w'   toggle downstream/upstream pathway
                 for event in pygame.event.get():
-                    if event.type == QUIT:
-                        running = False
-                    if event.type == KEYDOWN:
+                    if event.type == MOUSEBUTTONDOWN:
+                        mouse_drag = True
+                        pygame.mouse.get_rel()
+                    elif event.type == MOUSEBUTTONUP:
+                        mouse_drag = False
+                    elif event.type == MOUSEWHEEL:
+                        print("mousewheel")
+                    elif event.type == MOUSEMOTION:
+                        if self.display_nn:
+                            mouse_x, mouse_y = pygame.mouse.get_pos()
+                            selected_neuron = None
+                            for i, l in enumerate(self.nn_coords):
+                                if abs(l[0][0]-mouse_x) < 6:
+                                    for j, n in enumerate(l):
+                                        if abs(n[1]-mouse_y) < 6:
+                                            selected_neuron = (i, j)
+                                            break
+                                    break
+                        if mouse_drag:
+                            mouse_dx, mouse_dy = pygame.mouse.get_rel()
+                            self.camera.move(-mouse_dx*0.006, mouse_dy*0.006)
+                    elif event.type == KEYDOWN:
                         if event.key == K_ESCAPE or event.key == K_q:
                             running = False
                         elif event.key == K_k:    # Kill
@@ -230,10 +249,6 @@ class Evolve:
                             if not mirror: print('not mirror')
                         elif event.key == K_d:  # Display Neural Network
                             self.display_nn = not self.display_nn
-                            if self.display_nn:
-                                creature.nn.save_state = True
-                            else:
-                                creature.nn.save_state = False
                         elif event.key == K_f:
                             self.camera.follow(creature)
                         elif event.key == K_s:  # Slow motion
@@ -241,26 +256,64 @@ class Evolve:
                                 self.speed_multiplier = 0.1
                             else:
                                 self.speed_multiplier = 1.0
+                        elif event.key == K_p:  # Pause
+                            paused = not paused
+                        elif event.key == K_w:  # upstream/downstream pathway
+                            show_downstream = not show_downstream
+                    elif event.type == QUIT:
+                        running = False
                             
-            
-            creature.update(self.world.contactListener.sensors[creature.id], mirror)
+            if not paused:
+                creature.update(self.world.contactListener.sensors[creature.id], mirror)
             
             #### PyGame ####
             if self.display_mode:
                 self.camera.render()
 
+                # Display neural network
                 if self.display_nn:
                     white = (255, 255, 255)
-                    for j in range(len(self.nn_coords)-1):
-                        for i in range(len(self.nn_coords[j])):
-                            for w in range(len(self.nn_coords[j+1])):
-                                p1 = self.nn_coords[j][i]
-                                p2 = self.nn_coords[j+1][w]
-                                neuron_value = creature.nn.state[j][i]
-                                weight_value = creature.nn.weights[j][i][w]
+                    # Draw synapses
+                    for i in range(len(self.nn_coords)-1):
+                        for j in range(len(self.nn_coords[i])):
+                            p1 = self.nn_coords[i][j]
+                            for w in range(len(self.nn_coords[i+1])):
+                                p2 = self.nn_coords[i+1][w]
+                                neuron_value = creature.nn.state[i][j]
+                                weight_value = creature.nn.weights[i][j][w]
                                 if weight_value * neuron_value:
-                                    width = int(round(abs(weight_value)*4))
-                                    pygame.draw.line(self.screen, white, p1, p2, width)
+                                    pygame.draw.line(self.screen, white, p1, p2, 1)
+                    
+                    # Draw synapses of selected neuron
+                    if selected_neuron:
+                        i, j = selected_neuron
+                        p1 = self.nn_coords[i][j]
+                        if show_downstream and i < len(self.nn_coords)-1 or i == 0:
+                            for n in range(len(self.nn_coords[i+1])):
+                                p2 = self.nn_coords[i+1][n]
+                                neuron_value = creature.nn.state[i][j]
+                                weight_value = creature.nn.weights[i][j][n]
+                                intensity = weight_value * neuron_value
+                                if weight_value:
+                                    width = max(1, int(round(abs(weight_value)*8)))
+                                    green = round(max(0, intensity) * 255)
+                                    red = round(abs(min(0, intensity)) * 255)
+                                    color = (red, green, 0)
+                                    pygame.draw.line(self.screen, color, p1, p2, width)
+                        elif not show_downstream and i > 0 or i == len(self.nn_coords)-1:
+                            for n in range(len(self.nn_coords[i-1])):
+                                p2 = self.nn_coords[i-1][n]
+                                neuron_value = creature.nn.state[i-1][n]
+                                weight_value = creature.nn.weights[i-1][n][j]
+                                intensity = weight_value * neuron_value
+                                if weight_value:
+                                    width = max(1, int(round(abs(weight_value)*8)))
+                                    green = round(max(0, intensity) * 255)
+                                    red = round(abs(min(0, intensity)) * 255)
+                                    color = (red, green, 0)
+                                    pygame.draw.line(self.screen, color, p1, p2, width)
+                    
+                    # Draw neurons
                     for layer_num in range(len(self.nn_coords)):
                         for neuron_num in range(len(self.nn_coords[layer_num])):
                             x, y = self.nn_coords[layer_num][neuron_num]
@@ -268,11 +321,17 @@ class Evolve:
                             green = round(max(0, neuron_value) * 255)
                             red = round(abs(min(0, neuron_value)) * 255)
                             color = (red, green, 0)
-                            pygame.draw.circle(self.screen, color, (x, y), 8)
+                            if selected_neuron == (layer_num, neuron_num):
+                                pygame.draw.circle(self.screen, color, (x, y), 8)
+                            else:
+                                pygame.draw.circle(self.screen, color, (x, y), 6)
 
                 pygame.display.flip()
                 self.clock.tick(TARGET_FPS)
-
+            
+            if paused:
+                continue
+            
             self.world.Step(TIME_STEP*self.speed_multiplier, 6, 2)
             steps += 1 * self.speed_multiplier
             if steps >= self.args.limit_steps or not creature.body.awake:
@@ -326,7 +385,7 @@ def parseInputs():
     parser.add_argument('-m', '--mutate', type=int, default=2,
                         help='mutation frequency multiplier (defaults to 2)')
     parser.add_argument('-f', '--file', type=str, help='population file')
-    parser.add_argument('-r', '--terrain_roughness', type=int, default=30, help='terrain variation in elevation (in percent)')
+    parser.add_argument('-t', '--terrain_roughness', type=int, default=30, help='terrain variation in elevation (in percent)')
     parser.add_argument('-s', '--save_interval', type=int, default=10, help='save population to disk every X generations')
     parser.add_argument('-l', '--limit_steps', type=int, default=500, help='max number of steps for each individual trial (defaults to 500)')
     parser.add_argument('-p', '--pool_size', type=int, default=200, help='size of creature population (defaults to 200)')
