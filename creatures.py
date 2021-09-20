@@ -18,7 +18,6 @@ class Animatronic(object):
         self.id = uuid.uuid1().fields[0]
         self.world = world
         self.score = 0
-        self.keeper = False
         self.sensors = []
     
     def set_start_position(self, x, y):
@@ -71,7 +70,6 @@ class Animatronic(object):
 
 
 
-
 class Cubotron1000(Animatronic):
     """"
          Neural network input layer:
@@ -89,10 +87,10 @@ class Cubotron1000(Animatronic):
     """
     
     def __init__(self, world):
-        self.morpho = "Cubotron1000"
-        self.n_sensors = 4
-        self.n_inputs = 2+4+4
         super().__init__(world)
+        self.morpho = "Cubotron1000"
+        self.n_contact_sensors = 4
+        self.n_inputs = 2+4+4
         
     
     def init_body(self):
@@ -154,7 +152,7 @@ class Cubotron1000(Animatronic):
         self.bodies.append(self.lfoot)
         self.bodies.append(self.rfoot)
         
-        self.world.contactListener.registerSensors(self.id, self.n_sensors)
+        self.world.contactListener.registerSensors(self.id, self.n_contact_sensors)
         
         self.joints = []
         self.joints.append(
@@ -236,9 +234,52 @@ class Cubotron1000(Animatronic):
 
 
 
+class Cubotron1001(Cubotron1000):
+    """
+        Same as Cubotron1000 but with a body angle sensor
+    """
+    
+    def __init__(self, world):
+        super().__init__(world)
+        self.morpho = "Cubotron1001"
+        self.n_inputs += 1
+    
+    
+    def update(self, sensors, mirror=False):
+        dpos = self.target - self.body.position
+        if dpos.length > 1:
+            dpos.Normalize()
+        joint_angles = [(j.angle%(2*pi))/pi - 1 for j in self.joints]
+        # Make the limbs angle list symmetric (second half *= -1)
+        for i in range(len(joint_angles)//2 + len(joint_angles)%2, len(joint_angles)):
+            joint_angles[i] *= -1
+        
+        # Add body angle sensor, range [-180, 180] maps to [-1, 1]
+        body_angle = ((self.bodies[0].angle + pi) % (2 * pi) - pi) / pi
+        
+        self.sensors = [dpos.x, dpos.y] + joint_angles + sensors + [body_angle]
+        if dpos.x < 0 or mirror:
+            # Mirror mode
+            joint_angles = joint_angles[::-1]
+            self.sensors = [-dpos.x, dpos.y] + joint_angles + sensors[::-1] + [body_angle]
+        
+        self.nn.feedforward(self.sensors)
+        if dpos.x < 0 or mirror:
+            # Mirror mode
+            self.joints[0].motorSpeed = -self.nn.output[3]*20
+            self.joints[1].motorSpeed = -self.nn.output[2]*20
+            self.joints[2].motorSpeed = -self.nn.output[1]*20
+            self.joints[3].motorSpeed = -self.nn.output[0]*20
+        else:
+            for i in range(len(self.joints)):
+                self.joints[i].motorSpeed = self.nn.output[i]*20
+
+
+
+
 
 class Boulotron2000(Animatronic):
-    """"
+    """
          Neural network input layer:
              [pos.x] [pos.y] [joints × 6] [contact_sensors × 6] [body_angle]
              
@@ -254,10 +295,10 @@ class Boulotron2000(Animatronic):
     """
     
     def __init__(self, world):
-        self.morpho = "Boulotron2000"
-        self.n_sensors = 6
-        self.n_inputs = 2+6+6+1
         super().__init__(world)
+        self.morpho = "Boulotron2000"
+        self.n_contact_sensors = 6
+        self.n_inputs = 2+6+6+1
     
     
     def init_body(self):
@@ -345,7 +386,7 @@ class Boulotron2000(Animatronic):
                                        userData = (self.id, 5), groupIndex=-1)
         
         # Contact sensors
-        self.world.contactListener.registerSensors(self.id, self.n_sensors)
+        self.world.contactListener.registerSensors(self.id, self.n_contact_sensors)
         
         self.joints = []
         self.joints.append(
@@ -427,15 +468,13 @@ class Boulotron2000(Animatronic):
         dpos = self.target - self.body.position
         if dpos.length > 1:                          # Radius of sight
             dpos.Normalize()
-        joint_angles = [(j.angle%(2*pi))/pi - 1 for j in self.joints]
+        joint_angles = [(j.angle % (2*pi)) / pi - 1 for j in self.joints]
         # Make the limbs angle list symmetric (second half *= -1)
         for i in range(len(joint_angles)//2 + len(joint_angles)%2, len(joint_angles)):
             joint_angles[i] *= -1
-        # Insert body angle sensor
-        if self.bodies[0].angle < 0:
-            body_angle = (self.bodies[0].angle%(-2*pi)) / (2*pi)
-        else:
-            body_angle = (self.bodies[0].angle%(2*pi)) / (2*pi)
+        
+        # Add body angle sensor, range [-180, 180] maps to [-1, 1]
+        body_angle = ((self.bodies[0].angle + pi) % (2 * pi) - pi) / pi
         
         self.sensors = [dpos.x, dpos.y] + joint_angles + sensors + [body_angle]
         if dpos.x < 0 or mirror:
@@ -443,7 +482,7 @@ class Boulotron2000(Animatronic):
             self.sensors = [-dpos.x, dpos.y] + joint_angles[::-1] + sensors[::-1] + [body_angle]
         
         # Send input to neural network
-        self.nn.feedforward(to_nn)
+        self.nn.feedforward(self.sensors)
         
         # Read output from neural network
         if dpos.x < 0 or mirror:
@@ -483,12 +522,8 @@ class Boulotron2001(Animatronic):
     
     def __init__(self, world):
         self.morpho = "Boulotron2001"
-        self.n_sensors = 6
+        self.n_contact_sensors = 6
         self.n_inputs = 2+6+6+1
-        self.nn = NeuralNetwork()
-        self.nn.init_weights(layers)
-        self.nn.set_activation(activation)
-        
         super().__init__(world)
     
     
@@ -577,7 +612,7 @@ class Boulotron2001(Animatronic):
                                        userData = (self.id, 5), groupIndex=-1)
         
         # Contact sensors
-        self.world.contactListener.registerSensors(self.id, self.n_sensors)
+        self.world.contactListener.registerSensors(self.id, self.n_contact_sensors)
         
         self.joints = []
         self.joints.append(
@@ -663,11 +698,9 @@ class Boulotron2001(Animatronic):
         # Make the limbs angle list symmetric (second half *= -1)
         for i in range(len(joint_angles)//2 + len(joint_angles)%2, len(joint_angles)):
             joint_angles[i] *= -1
-        # Insert body angle sensor
-        if self.bodies[0].angle < 0:
-            body_angle = (self.bodies[0].angle%(-2*pi)) / (2*pi)
-        else:
-            body_angle = (self.bodies[0].angle%(2*pi)) / (2*pi)
+        
+        # Add body angle sensor, range [-180, 180] maps to [-1, 1]
+        body_angle = ((self.bodies[0].angle + pi) % (2 * pi) - pi) / pi
         
         if dpos.x < 0 or mirror:
             # Mirror mode

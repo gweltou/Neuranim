@@ -1,11 +1,6 @@
-ANIMATRONIC = "Cubotron1000"   # Possible values: "Cubotron1000", "Boulotron2000", "Boulotron2001"
+ANIMATRONIC = "Cubotron1001"   # Possible values: "Cubotron1000", "Boulotron2000", "Boulotron2001"
 ACTIVATION = "tanh"
-HIDDEN_LAYERS = [10, 10]
-
-
-START_POP = 200
-WINNERS_PER_GENERATION = 15
-END_GEN = 500
+HIDDEN_LAYERS = [11, 11]
 
 
 STARTPOS = (-8, 3)

@@ -14,16 +14,15 @@ Apprentissage automatique de la marche pour robots virtuels.
 
 ## Mise en marche
 ### Première étape: Modifier le fichier "parameters.py"
- * START_POP : nombre d'individus pour la génération 0
- * WINNERS_PER_GENERATION : nombre d'individus selectionnés pour la génération suivante
- * END_GEN : nombre de générations au bout duquel la simulation s'interrompra
+ * 
 
 ### Evolution
 Usage:
 ```
 $ python3 evolve.py -h
-usage: evolve.py [-h] [-v] [-m MUTATE] [-f FILE] [-r ROUGHNESS]
-                 [-s SAVE_INTERVAL] [-l LIMIT_STEPS]
+usage: evolve.py [-h] [-v] [-m MUTATE] [-f FILE] [-t TERRAIN_ROUGHNESS]
+                 [-s SAVE_INTERVAL] [-l LIMIT_STEPS] [-p POOL_SIZE]
+                 [-w WINNERS_PERCENT] [-e END_GENERATION]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -31,12 +30,20 @@ optional arguments:
   -m MUTATE, --mutate MUTATE
                         mutation frequency multiplier (defaults to 2)
   -f FILE, --file FILE  population file
-  -r ROUGHNESS, --roughness ROUGHNESS
+  -t TERRAIN_ROUGHNESS, --terrain_roughness TERRAIN_ROUGHNESS
                         terrain variation in elevation (in percent)
-  -s SAVE_INTERVAL, --save-interval SAVE_INTERVAL
+  -s SAVE_INTERVAL, --save_interval SAVE_INTERVAL
                         save population to disk every X generations
   -l LIMIT_STEPS, --limit_steps LIMIT_STEPS
                         max number of steps for each individual trial
+                        (defaults to 500)
+  -p POOL_SIZE, --pool_size POOL_SIZE
+                        size of creature population (defaults to 200)
+  -w WINNERS_PERCENT, --winners_percent WINNERS_PERCENT
+                        percent of selected individuals per generation
+  -e END_GENERATION, --end_generation END_GENERATION
+                        limit simulation to this number of generations
+                        (defaults to 500)
 ```
 
 Evolution d'une population d'après les paramètres par défaut
@@ -57,8 +64,9 @@ Une mutation peut définir une nouvelle valeur (entre -1 et 1) à un gène ou bi
 
 ## TODO:
  * Implémenter la nouvelle morphologie (avec perception de l'horizontalité et de la hauteur par rapport au sol)
+ * Entrainer à sauter
+ * Mode présentation : touche "screenshot", placer l'image dans le rép de la population
  * Utiliser des scenarios d'entrainement
- * touche 'r', follow en mode présentation
 
 ## Quelques idées:
  * Tester réseau neuronal qui s'actualise d'une couche à la fois (pour un RN de x couches intermédiaires, il faudra donc x+1 pas pour le traverser entièrement)
