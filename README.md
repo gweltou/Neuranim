@@ -14,7 +14,9 @@ Apprentissage automatique de la marche pour robots virtuels.
 
 ## Mise en marche
 ### Première étape: Modifier le fichier "parameters.py"
- * 
+ * Choisir une morphologie par la variable "ANIMATRONIC"
+ * Choisir le nombre de couches intermédiaires et le nombre de neurones par couche (hors biais) avec la variable "HIDDEN_LAYERS"
+ * Choisir la fonction d'activation globale avec la variable "ACTIVATION"
 
 ### Evolution
 Usage:
@@ -63,10 +65,10 @@ Chaque exécution de la fonction Animatronic.mutate provoque la mutation de 2 g�
 Une mutation peut définir une nouvelle valeur (entre -1 et 1) à un gène ou bien le désactiver (valeur définie à 0). Un gène désactivé ne subit plus de mutations et il ne peut donc pas être réactivé. Les désactivations représentent 2% des mutations.
 
 ## TODO:
- * Implémenter la nouvelle morphologie (avec perception de l'horizontalité et de la hauteur par rapport au sol)
  * Entrainer à sauter
  * Mode présentation : touche "screenshot", placer l'image dans le rép de la population
  * Utiliser des scenarios d'entrainement
+ * Cumul du score pour chaque creature
 
 ## Quelques idées:
  * Tester réseau neuronal qui s'actualise d'une couche à la fois (pour un RN de x couches intermédiaires, il faudra donc x+1 pas pour le traverser entièrement)

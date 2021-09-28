@@ -82,7 +82,7 @@ class Camera(queryCallback):
         self.following = False
     
     def set_target(self, pos):
-        self.set_center(self.center + (pos-self.center)/10)
+        self.set_center(self.center + (pos-self.center)/20)
     
     def follow(self, creature):
         """ Auto-update self.center on a given Box2D body position """
