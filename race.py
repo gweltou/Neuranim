@@ -95,7 +95,7 @@ class Evolve:
         creature = self.pool.pop()
         creature.set_start_position(STARTPOS[0], STARTPOS[1] + self.startpos_elevation)
         # Choose a new target
-        self.target = vec2(TARGET)  # vec2(random.choice(TARGETS))
+        self.target = vec2((51, 0))  # vec2(random.choice(TARGETS))
         creature.set_target(self.target.x, self.target.y)
         r = random.randrange(160, 240)
         g = random.randrange(120, 200)
@@ -104,7 +104,13 @@ class Evolve:
         #creature.init_body()
         return creature
         
-        
+    
+    def next_runners(self):
+        for c in self.creatures:
+            c.destroy()
+        self.creatures = [self.pop_creature() for i in range(args.num_participants)]
+    
+    
     def mainLoop(self):
         podium = []
         creatures = [self.pop_creature() for i in range(args.num_participants)]
@@ -117,16 +123,15 @@ class Evolve:
         mouse_drag = False
         paused = False
         running = True
+        
         while running:
         
             #### PyGame ####
             # Process keyboard events
             # 'q' or 'ESC'  Quit
-            # 'd'   show neural network
             # 'f'   center on creature and follow
             # 's'   slow motion
             # 'p'   pause
-            # 'w'   toggle downstream/upstream pathway
             for event in pygame.event.get():
                 if event.type == MOUSEBUTTONDOWN:
                     mouse_drag = True
@@ -154,9 +159,14 @@ class Evolve:
                     elif event.key == K_p:  # Pause
                         paused = not paused
                     elif event.key == K_n:  # Next batch
+                        self.camera.set_center(vec2(0, 0))
                         for c in creatures:
                             c.destroy()
                         creatures = [self.pop_creature() for i in range(args.num_participants)]
+                        for i, c in enumerate(creatures):
+                            c.set_start_position(c.start_position.x-i, c.start_position.y)
+                            c.init_body()
+                            c.set_category(i+1)
                 elif event.type == QUIT:
                     running = False
             
