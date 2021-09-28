@@ -168,8 +168,8 @@ class Evolve:
         if "stats" in data:
             self.stats.var_dict = data["stats"]
         print('Population "{}"'.format(self.pool[0].pop_id))
-        print("layers (input+hidden+output): {}".format(self.pool[0].nn.get_layers()))
-        print("activation: {}".format(self.pool[0].nn.activation))
+        print("Layers (input+hidden+output): {}".format(self.pool[0].nn.get_layers()))
+        print("Activation: {}".format(self.pool[0].nn.activation))
         print("{} drones imported".format(len(self.pool)))
         print("Starting from generation {}".format(self.generation))
     
