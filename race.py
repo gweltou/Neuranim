@@ -97,6 +97,10 @@ class Evolve:
         # Choose a new target
         self.target = vec2(TARGET)  # vec2(random.choice(TARGETS))
         creature.set_target(self.target.x, self.target.y)
+        r = random.randrange(160, 240)
+        g = random.randrange(120, 200)
+        b = random.randrange(120, 200)
+        creature.color = (r, g, b)
         #creature.init_body()
         return creature
         
@@ -149,6 +153,10 @@ class Evolve:
                             self.speed_multiplier = 1.0
                     elif event.key == K_p:  # Pause
                         paused = not paused
+                    elif event.key == K_n:  # Next batch
+                        for c in creatures:
+                            c.destroy()
+                        creatures = [self.pop_creature() for i in range(args.num_participants)]
                 elif event.type == QUIT:
                     running = False
             

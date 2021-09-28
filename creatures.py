@@ -119,9 +119,7 @@ class Cubotron1000(Animatronic):
         
         self.body = self.world.CreateDynamicBody(position=self.start_position)
         self.body.CreatePolygonFixture(box=(0.5, 0.5), density=1, friction=0.3,
-                                       userData = "body_trunc",
-                                       categoryBits=0x0002,
-                                       #maskBits=0x0001,
+                                       userData = self,
                                       )
         # Ground/Body sensors
         self.body.CreateCircleFixture(pos=(-0.5, 0.5), radius=0.15,
@@ -138,18 +136,13 @@ class Cubotron1000(Animatronic):
         self.lleg = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.lleg.CreatePolygonFixture(box=(0.3, 0.15), density=1,
                                                  friction=0.3,
-                                                 userData = "lleg",
-                                                 categoryBits=0x0002,
-                                                 #maskBits = 
-                                                 #groupIndex = -1
+                                                 userData = self,
                                                 )
         self.bodies.append(self.lleg)
         
         self.rleg = self.world.CreateDynamicBody(position=self.start_position)
         self.rleg.CreatePolygonFixture(box=(0.3, 0.15), density=1, friction=0.3,
-                                       userData = "rleg",
-                                       categoryBits=0x0002,
-                                       #groupIndex = -1,
+                                       userData = self,
                                       )
         self.bodies.append(self.rleg)
         
@@ -157,29 +150,23 @@ class Cubotron1000(Animatronic):
         self.lfoot = self.world.CreateDynamicBody(position=self.start_position)
         self.lfoot.CreatePolygonFixture(box=(0.36, 0.08), density=1,
                                         friction=0.3,
-                                        userData = "lfoot",
-                                        categoryBits=0x0002,
-                                        #groupIndex = -1,
+                                        userData = self,
                                        )
         ## Ground/Foot sensor
         self.lfoot.CreateCircleFixture(pos=(-0.36, 0), radius=0.15,
                                        density=1, friction=1.0, restitution=0.0,
                                        userData = (self.id, 0),
-                                       #groupIndex=-1
                                       )
         
         self.rfoot = self.world.CreateDynamicBody(position=self.start_position)
         self.rfoot.CreatePolygonFixture(box=(0.36, 0.08), density=1,
                                         friction=0.3,
-                                        userData = "rfoot",
-                                        categoryBits=0x0002,
-                                        #groupIndex = -1,
+                                        userData = self,
                                        )
         ## Ground/Foot sensor
         self.rfoot.CreateCircleFixture(pos=(0.36, 0), radius=0.15,
                                        density=1, friction=1.0, restitution=0.0,
                                        userData = (self.id, 3),
-                                       #groupIndex=-1,
                                       )
         self.bodies.append(self.lfoot)
         self.bodies.append(self.rfoot)

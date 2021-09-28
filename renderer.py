@@ -5,6 +5,7 @@
 from math import (floor, ceil)
 import pygame
 from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, pi, vec2, queryCallback, AABB)
+from creatures import Animatronic
 
 
 
@@ -33,8 +34,13 @@ class Camera(queryCallback):
         shape = fixture.shape
         if shape.type == 2:  # Polygon shape
             # Convert vertices local coord to absolute px coord
-            vertices = [self.world_to_px(-self.center+(fixture.body.transform * v)) for v in shape.vertices]
-            pygame.draw.polygon(self.screen, (160, 160, 160, 255), vertices)
+            vertices = [self.world_to_px(fixture.body.transform * v) for v in shape.vertices]
+            if isinstance(fixture.userData, Animatronic):
+                creature = fixture.userData
+                if hasattr(creature, 'color'):
+                    pygame.draw.polygon(self.screen, creature.color, vertices)
+            else:
+                pygame.draw.polygon(self.screen, (160, 160, 160, 255), vertices)
         
         if shape.type == 0: # Circle shape
             color = (160, 160, 160, 255)
@@ -45,13 +51,13 @@ class Camera(queryCallback):
                     color = (0, 255, 0, 255)
             # TODO: replace with pygame.draw.ellipse()
             pygame.draw.circle(self.screen, color,
-                               self.world_to_px(-self.center+(fixture.body.transform * shape.pos)),
+                               self.world_to_px(fixture.body.transform * shape.pos),
                                int(shape.radius * self.HPPM))
         
         if shape.type == 1 and fixture.userData == 'ground':
             #Ground line
-            p0 = self.world_to_px(-self.center+shape.vertices[0])
-            p1 = self.world_to_px(-self.center+shape.vertices[1])
+            p0 = self.world_to_px(shape.vertices[0])
+            p1 = self.world_to_px(shape.vertices[1])
             px_points = [(p0[0], p0[1]),
                          (p1[0], p1[1]),
                          (p1[0], self.screen_height),
@@ -64,7 +70,8 @@ class Camera(queryCallback):
     
     def world_to_px(self, pos):
         """ Reverse height coordinates (up is positive in Box2D) """
-        return int(pos[0]*self.HPPM)+self.screen_width//2, int(self.screen_height//2 - pos[1]*self.VPPM)
+        return int((pos[0]-self.center.x)*self.HPPM)+self.screen_width//2, \
+               int(self.screen_height//2 - (pos[1]-self.center.y)*self.VPPM)
     
     
     def set_center(self, pos):
@@ -74,6 +81,11 @@ class Camera(queryCallback):
                          upperBound=self.center+(self.width/2, self.height/2))
     
     
+    def draw_creature(self):
+        pass
+    
+    
+    
     def move(self, x, y):
         self.center[0] += x
         self.center[1] += y
@@ -81,13 +93,16 @@ class Camera(queryCallback):
                          upperBound=self.center+(self.width/2, self.height/2))
         self.following = False
     
+    
     def set_target(self, pos):
         self.set_center(self.center + (pos-self.center)/20)
+    
     
     def follow(self, creature):
         """ Auto-update self.center on a given Box2D body position """
         self.following = True
         self.body_to_follow = creature.body
+    
     
     def render(self):
         """ Render every Box2D bodies on screen's bounding box"""
