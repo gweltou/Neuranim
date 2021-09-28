@@ -24,37 +24,18 @@ class Camera(queryCallback):
         self.center = vec2(center)
         self.aabb = AABB(lowerBound=self.center-(self.width/2, self.height/2),
                          upperBound=self.center+(self.width/2, self.height/2))
+        self.creatures_in_view = set()
         self.following = False
         queryCallback.__init__(self)
     
     
     def ReportFixture(self, fixture):
-        # TODO: à nettoyer
         # Draw fixture
         shape = fixture.shape
-        if shape.type == 2:  # Polygon shape
-            # Convert vertices local coord to absolute px coord
-            vertices = [self.world_to_px(fixture.body.transform * v) for v in shape.vertices]
-            if isinstance(fixture.userData, Animatronic):
-                creature = fixture.userData
-                if hasattr(creature, 'color'):
-                    pygame.draw.polygon(self.screen, creature.color, vertices)
-            else:
-                pygame.draw.polygon(self.screen, (160, 160, 160, 255), vertices)
         
-        if shape.type == 0: # Circle shape
-            color = (160, 160, 160, 255)
-            # Check if it is a sensor
-            if isinstance(fixture.userData, tuple):
-                color = (200, 200, 200, 255)
-                if self.world.contactListener.sensors[fixture.userData[0]][fixture.userData[1]] == True:
-                    color = (0, 255, 0, 255)
-            # TODO: replace with pygame.draw.ellipse()
-            pygame.draw.circle(self.screen, color,
-                               self.world_to_px(fixture.body.transform * shape.pos),
-                               int(shape.radius * self.HPPM))
-        
-        if shape.type == 1 and fixture.userData == 'ground':
+        if isinstance(fixture.userData, Animatronic):
+            self.creatures_in_view.add(fixture.userData)
+        elif fixture.userData == 'ground' and shape.type == 1:
             #Ground line
             p0 = self.world_to_px(shape.vertices[0])
             p1 = self.world_to_px(shape.vertices[1])
@@ -63,7 +44,25 @@ class Camera(queryCallback):
                          (p1[0], self.screen_height),
                          (p0[0], self.screen_height)]
             pygame.draw.polygon(self.screen, (64, 64, 64, 255), px_points)
-                
+            
+        else:
+            if shape.type == 2:  # Polygon shape
+                # Convert vertices local coord to absolute px coord
+                vertices = [self.world_to_px(fixture.body.transform * v) for v in shape.vertices]
+                pygame.draw.polygon(self.screen, (160, 160, 160, 255), vertices)
+            
+            if shape.type == 0: # Circle shape
+                color = (160, 160, 160, 255)
+                # Check if it is a sensor
+                if isinstance(fixture.userData, tuple):
+                    color = (200, 200, 200, 255)
+                    if self.world.contactListener.sensors[fixture.userData[0]][fixture.userData[1]] == True:
+                        color = (0, 255, 0, 255)
+                # TODO: replace with pygame.draw.ellipse()
+                pygame.draw.circle(self.screen, color,
+                                   self.world_to_px(fixture.body.transform * shape.pos),
+                                   int(shape.radius * self.HPPM))
+        
         # Continue the query by returning True
         return True
     
@@ -81,9 +80,15 @@ class Camera(queryCallback):
                          upperBound=self.center+(self.width/2, self.height/2))
     
     
-    def draw_creature(self):
-        pass
-    
+    def draw_creature(self, creature):
+        color = (160, 160, 160)
+        if hasattr(creature, 'color'):
+            color = creature.color
+        for b in creature.bodies:
+            for f in b.fixtures:
+                if f.shape.type == 2: # Polygons
+                    vertices = [self.world_to_px(f.body.transform * v) for v in f.shape.vertices]
+                    pygame.draw.polygon(self.screen, color, vertices)
     
     
     def move(self, x, y):
@@ -127,6 +132,8 @@ class Camera(queryCallback):
                                  ((px_x, 0), (meter, self.screen_height)))
         
         # Render Box2D World
+        self.creatures_in_view.clear()
         self.world.QueryAABB(self, self.aabb)
-        #pygame.draw.rect(self.screen
+        for c in sorted(self.creatures_in_view, key=lambda c: c.id):
+            self.draw_creature(c)
         

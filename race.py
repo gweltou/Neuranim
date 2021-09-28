@@ -118,6 +118,7 @@ class Evolve:
             c.set_start_position(c.start_position.x-i, c.start_position.y)
             c.init_body()
             c.set_category(i+1)
+        self.camera.follow(creatures[0])
         steps = 0
         mirror = False
         mouse_drag = False
@@ -160,6 +161,7 @@ class Evolve:
                         paused = not paused
                     elif event.key == K_n:  # Next batch
                         self.camera.set_center(vec2(0, 0))
+                        self.build_ground()
                         for c in creatures:
                             c.destroy()
                         creatures = [self.pop_creature() for i in range(args.num_participants)]
@@ -167,6 +169,7 @@ class Evolve:
                             c.set_start_position(c.start_position.x-i, c.start_position.y)
                             c.init_body()
                             c.set_category(i+1)
+                        self.camera.follow(creatures[0])
                 elif event.type == QUIT:
                     running = False
             
