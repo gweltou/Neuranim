@@ -160,6 +160,7 @@ class Evolve:
                     elif event.key == K_p:  # Pause
                         paused = not paused
                     elif event.key == K_n:  # Next batch
+                        steps = 0
                         self.camera.set_center(vec2(0, 0))
                         self.build_ground()
                         for c in creatures:

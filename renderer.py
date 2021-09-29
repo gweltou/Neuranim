@@ -96,7 +96,7 @@ class Camera(queryCallback):
                     if isinstance(f.userData, tuple):
                         color = tuple( [max(0, int(c*0.84)) for c in main_color] )
                         if self.world.contactListener.sensors[f.userData[0]][f.userData[1]] == True:
-                            color = (0, 255, 0, 255)
+                            color = (0, 185, 0, 255)
                     # TODO: replace with pygame.draw.ellipse()
                     pygame.draw.circle(self.screen, color,
                                    self.world_to_px(b.transform * f.shape.pos),
