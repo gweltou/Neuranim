@@ -35,6 +35,8 @@ class Camera(queryCallback):
         
         if isinstance(fixture.userData, Animatronic):
             self.creatures_in_view.add(fixture.userData)
+        elif isinstance(fixture.userData, tuple):
+            pass
         elif fixture.userData == 'ground' and shape.type == 1:
             #Ground line
             p0 = self.world_to_px(shape.vertices[0])
@@ -81,15 +83,26 @@ class Camera(queryCallback):
     
     
     def draw_creature(self, creature):
-        color = (160, 160, 160)
+        main_color = (160, 160, 160)
         if hasattr(creature, 'color'):
-            color = creature.color
+            main_color = creature.color
         for b in creature.bodies:
             for f in b.fixtures:
+                color = main_color
                 if f.shape.type == 2: # Polygons
                     vertices = [self.world_to_px(f.body.transform * v) for v in f.shape.vertices]
                     pygame.draw.polygon(self.screen, color, vertices)
-    
+                elif f.shape.type == 0: # Circles
+                    if isinstance(f.userData, tuple):
+                        color = tuple( [max(0, int(c*0.84)) for c in main_color] )
+                        if self.world.contactListener.sensors[f.userData[0]][f.userData[1]] == True:
+                            color = (0, 255, 0, 255)
+                    # TODO: replace with pygame.draw.ellipse()
+                    pygame.draw.circle(self.screen, color,
+                                   self.world_to_px(b.transform * f.shape.pos),
+                                   int(f.shape.radius * self.HPPM))
+                else:
+                    print(f.shape.type)
     
     def move(self, x, y):
         self.center[0] += x

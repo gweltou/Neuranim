@@ -334,10 +334,8 @@ class Boulotron2000(Animatronic):
         
         self.body = self.world.CreateDynamicBody(position=self.start_position)
         self.body.CreateCircleFixture(pos=(0.0, 0.0), radius=0.6, density=1.0,
-                                      userData = "body_trunc")
-        self.bodies.append(self.body)
-        
-        
+                                      userData = self,)
+                
         ## Ground/Body sensors
         self.body.CreateCircleFixture(pos=(-0.58, -0.1), radius=0.15,
                                        density=0,
@@ -345,12 +343,13 @@ class Boulotron2000(Animatronic):
         self.body.CreateCircleFixture(pos=(0.58, -0.1), radius=0.15,
                                        density=0,
                                        isSensor=True, userData = (self.id, 3))
+        self.bodies.append(self.body)
         
         
         # Thighs
         self.lthigh = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.lthigh.CreatePolygonFixture(box=(0.3, 0.15), density=1, friction=0.3,
-                                                 userData = "lthigh")
+                                                   userData = self,)
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.lthigh)
         
@@ -363,13 +362,13 @@ class Boulotron2000(Animatronic):
         # Legs
         self.lleg = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.lleg.CreatePolygonFixture(box=(0.36, 0.1), density=1, friction=0.3,
-                                                  userData = "lthigh")
+                                                 userData = self,)
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.lleg)
         
         self.rleg = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.rleg.CreatePolygonFixture(box=(0.36, 0.1), density=1, friction=0.3,
-                                                  userData = "rleg")
+                                                 userData = self,)
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.rleg)
         
@@ -386,13 +385,13 @@ class Boulotron2000(Animatronic):
         # Feet
         self.lfoot  = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.lfoot.CreatePolygonFixture(box=(0.2, 0.08), density=1, friction=0.3,
-                                                  userData = "lfoot")
+                                                  userData = self,)
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.lfoot)
         
         self.rfoot = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.rfoot.CreatePolygonFixture(box=(0.2, 0.08), density=1, friction=0.3,
-                                                  userData = "rfoot")
+                                                  userData = self,)
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.rfoot)
         
@@ -560,7 +559,7 @@ class Boulotron2001(Animatronic):
         
         self.body = self.world.CreateDynamicBody(position=self.start_position)
         self.body.CreateCircleFixture(pos=(0.0, 0.0), radius=0.6, density=0.5,
-                                      userData = "body_trunc")
+                                      userData = self)
         self.bodies.append(self.body)
         
         
@@ -576,7 +575,7 @@ class Boulotron2001(Animatronic):
         # Thighs
         self.lthigh = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.lthigh.CreatePolygonFixture(box=(0.3, 0.15), density=1, friction=0.3,
-                                                 userData = "lthigh")
+                                                 userData = self)
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.lthigh)
         
@@ -589,13 +588,13 @@ class Boulotron2001(Animatronic):
         # Legs
         self.lleg = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.lleg.CreatePolygonFixture(box=(0.36, 0.1), density=1, friction=0.3,
-                                                  userData = "lthigh")
+                                                  userData = self)
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.lleg)
         
         self.rleg = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.rleg.CreatePolygonFixture(box=(0.36, 0.1), density=1, friction=0.3,
-                                                  userData = "rleg")
+                                                  userData = self)
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.rleg)
         
@@ -612,13 +611,13 @@ class Boulotron2001(Animatronic):
         # Feet
         self.lfoot  = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.lfoot.CreatePolygonFixture(box=(0.1, 0.08), density=1, friction=0.3,
-                                                  userData = "lfoot")
+                                                  userData = self)
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.lfoot)
         
         self.rfoot = self.world.CreateDynamicBody(position=self.start_position)
         fixture = self.rfoot.CreatePolygonFixture(box=(0.1, 0.08), density=1, friction=0.3,
-                                                  userData = "rfoot")
+                                                  userData = self)
         fixture.filterData.groupIndex = -1
         self.bodies.append(self.rfoot)
         
