@@ -164,6 +164,7 @@ class Evolve:
         data = import_generation(filename, self.world)
         self.pool = data["population"]
         self.generation = data["generation"]
+        self.args.end_generation += self.generation
         self.stats.reset()
         if "stats" in data:
             self.stats.var_dict = data["stats"]
