@@ -34,11 +34,6 @@ class Evolve:
         self.pool = []
         self.stats = Stats()
         
-        ### Box2D ###
-        self.build_ground()
-        
-        self.target = vec2(TARGET) #vec2(random.choice(TARGETS))
-        
         self.speed_multiplier = 1.0
         
         # --- pygame setup ---
@@ -48,7 +43,11 @@ class Evolve:
         self.camera = Camera(self.world,
                              self.screen,
                              18.0, 18.0*SCREEN_HEIGHT/SCREEN_WIDTH)
-    
+        
+        ### Box2D ###
+        self.target = vec2(TARGET) #vec2(random.choice(TARGETS))
+        self.build_ground()
+        
     
     def build_ground(self):
         # A static body to hold the ground shape
@@ -58,7 +57,7 @@ class Evolve:
         self.ground = self.world.CreateStaticBody()
         start_posx = round(STARTPOS[0])
         assert -50 < start_posx < 50, "Starting position should be between -50 and 50"
-        for x in range(-50, 50):
+        for x in range(-50, 100):
             prev_elevation = elevation
             elevation = prev_elevation + (random.random()-0.5) * self.args.terrain_roughness*0.01
             self.ground.CreateEdgeFixture(vertices=[(x,prev_elevation), (x+1,elevation)],
@@ -66,6 +65,11 @@ class Evolve:
                                               userData='ground')
             if x == start_posx:
                 self.startpos_elevation = prev_elevation
+            elif abs(self.target.x-x) < 0.5:
+                self.camera.set_pole(self.target.x, prev_elevation)
+        self.ground.CreateEdgeFixture(vertices=[(x+1,elevation), (x+1,50)],
+                                              friction=1.0,
+                                              userData='ground')
 
 
     def load_population(self, filename):
@@ -92,32 +96,33 @@ class Evolve:
     
     
     def pop_creature(self):
-        creature = self.pool.pop()
+        if len(self.pool) == 0:
+            return None
+        
+        creature = self.pool.pop(random.randrange(len(self.pool)))
         creature.set_start_position(STARTPOS[0], STARTPOS[1] + self.startpos_elevation)
         # Choose a new target
-        self.target = vec2((51, 0))  # vec2(random.choice(TARGETS))
         creature.set_target(self.target.x, self.target.y)
         r = random.randrange(160, 240)
         g = random.randrange(120, 200)
         b = random.randrange(120, 200)
         creature.color = (r, g, b)
-        #creature.init_body()
+        
         return creature
         
     
     def next_runners(self):
-        for c in self.creatures:
-            c.destroy()
-        self.creatures = [self.pop_creature() for i in range(args.num_participants)]
+        runners = [self.pop_creature() for i in range(min(len(self.pool), args.num_participants))]
+        for i, c in enumerate(runners):
+            c.set_start_position(c.start_position.x-i, c.start_position.y)
+            c.init_body()
+            c.set_category(i+1)
+        return runners
     
     
     def mainLoop(self):
         podium = []
-        creatures = [self.pop_creature() for i in range(args.num_participants)]
-        for i, c in enumerate(creatures):
-            c.set_start_position(c.start_position.x-i, c.start_position.y)
-            c.init_body()
-            c.set_category(i+1)
+        creatures = self.next_runners()
         self.camera.follow(creatures[0])
         steps = 0
         mirror = False
@@ -140,7 +145,7 @@ class Evolve:
                 elif event.type == MOUSEBUTTONUP:
                     mouse_drag = False
                 elif event.type == MOUSEWHEEL:
-                    print("mousewheel")
+                    self.camera.zoom(event.y)
                 elif event.type == MOUSEMOTION:
                     if mouse_drag:
                         mouse_dx, mouse_dy = pygame.mouse.get_rel()
@@ -160,16 +165,14 @@ class Evolve:
                     elif event.key == K_p:  # Pause
                         paused = not paused
                     elif event.key == K_n:  # Next batch
+                        steps = 0
                         self.camera.set_center(vec2(0, 0))
                         self.build_ground()
                         for c in creatures:
                             c.destroy()
-                        creatures = [self.pop_creature() for i in range(args.num_participants)]
-                        for i, c in enumerate(creatures):
-                            c.set_start_position(c.start_position.x-i, c.start_position.y)
-                            c.init_body()
-                            c.set_category(i+1)
-                        self.camera.follow(creatures[0])
+                        creatures = self.next_runners()
+                        if not creatures:
+                            running = False
                 elif event.type == QUIT:
                     running = False
             
@@ -203,11 +206,9 @@ class Evolve:
 
 def parseInputs():
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('-m', '--mutate', type=int, default=2,
-                        help='mutation frequency multiplier (defaults to 2)')
     parser.add_argument('-f', '--file', type=str, help='population file')
-    parser.add_argument('-t', '--terrain_roughness', type=int, default=30, help='terrain variation in elevation (in percent)')
-    parser.add_argument('-l', '--limit_steps', type=int, default=500, help='max number of steps for each individual trial (defaults to 500)')
+    parser.add_argument('-t', '--terrain_roughness', type=int, default=20, help='terrain variation in elevation (in percent)')
+    parser.add_argument('-l', '--limit_steps', type=int, default=2000, help='max number of steps for each individual trial (defaults to 500)')
     parser.add_argument('-n', '--num-participants', type=int, default=4, help='')
     parser.add_argument('-p', '--pool_size', type=int, default=200, help='size of creature population (defaults to 200)')
     return parser.parse_args()
@@ -215,7 +216,6 @@ def parseInputs():
 
 if __name__ == "__main__":
     args = parseInputs()
-    args.mutate = max(1, args.mutate)
     args.terrain_roughness = max(0, args.terrain_roughness)
     args.limit_steps = max(50, args.limit_steps)
     
