@@ -45,6 +45,7 @@ class nnContactListener(contactListener):
         del self.sensors[id]
 
 
+
 def breed(creatures):
     # This function is weird...
     if len(creatures) < 2:
@@ -54,6 +55,7 @@ def breed(creatures):
     for p2 in creatures[1:]:
         offspring.append(p1.breed(p2))
     return offspring + breed(creatures[1:])
+
 
 
 def cross(array1, array2):

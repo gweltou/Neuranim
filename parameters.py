@@ -1,6 +1,6 @@
-ANIMATRONIC = "Cubotron1001"   # Possible values: "Cubotron1000", "Boulotron2000", "Boulotron2001"
+ANIMATRONIC = "Weakotron1001"   # Possible values: "Cubotron1000", "Cubotron1001", "Weakotron1001", "Boulotron2000", "Boulotron2001"
 ACTIVATION = "tanh"
-HIDDEN_LAYERS = [22, 22, 22]
+HIDDEN_LAYERS = [11, 11]
 
 
 STARTPOS = (-8, 3)

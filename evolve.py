@@ -210,7 +210,7 @@ class Evolve:
             if self.args.view:
                 # Process keyboard events
                 # 'q' or 'ESC'  Quit
-                # 'k'   next creature (kill)
+                # 'n'   next creature
                 # 'm'   mirror mode
                 # 'd'   show neural network
                 # 'f'   center on creature and follow
@@ -224,7 +224,7 @@ class Evolve:
                     elif event.type == MOUSEBUTTONUP:
                         mouse_drag = False
                     elif event.type == MOUSEWHEEL:
-                        print("mousewheel")
+                        self.camera.zoom(event.y)
                     elif event.type == MOUSEMOTION:
                         if self.display_nn:
                             mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -242,7 +242,7 @@ class Evolve:
                     elif event.type == KEYDOWN:
                         if event.key == K_ESCAPE or event.key == K_q:
                             running = False
-                        elif event.key == K_k:    # Kill
+                        elif event.key == K_n:    # Next
                             steps = self.args.limit_steps - 10
                         elif event.key == K_m:  # Mirror
                             mirror = not mirror

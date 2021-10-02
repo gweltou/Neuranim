@@ -96,7 +96,10 @@ class Evolve:
     
     
     def pop_creature(self):
-        creature = self.pool.pop()
+        if len(self.pool) == 0:
+            return None
+        
+        creature = self.pool.pop(random.randrange(len(self.pool)))
         creature.set_start_position(STARTPOS[0], STARTPOS[1] + self.startpos_elevation)
         # Choose a new target
         creature.set_target(self.target.x, self.target.y)
@@ -104,23 +107,22 @@ class Evolve:
         g = random.randrange(120, 200)
         b = random.randrange(120, 200)
         creature.color = (r, g, b)
-        #creature.init_body()
+        
         return creature
         
     
     def next_runners(self):
-        for c in self.creatures:
-            c.destroy()
-        self.creatures = [self.pop_creature() for i in range(args.num_participants)]
+        runners = [self.pop_creature() for i in range(min(len(self.pool), args.num_participants))]
+        for i, c in enumerate(runners):
+            c.set_start_position(c.start_position.x-i, c.start_position.y)
+            c.init_body()
+            c.set_category(i+1)
+        return runners
     
     
     def mainLoop(self):
         podium = []
-        creatures = [self.pop_creature() for i in range(args.num_participants)]
-        for i, c in enumerate(creatures):
-            c.set_start_position(c.start_position.x-i, c.start_position.y)
-            c.init_body()
-            c.set_category(i+1)
+        creatures = self.next_runners()
         self.camera.follow(creatures[0])
         steps = 0
         mirror = False
@@ -168,12 +170,9 @@ class Evolve:
                         self.build_ground()
                         for c in creatures:
                             c.destroy()
-                        creatures = [self.pop_creature() for i in range(args.num_participants)]
-                        for i, c in enumerate(creatures):
-                            c.set_start_position(c.start_position.x-i, c.start_position.y)
-                            c.init_body()
-                            c.set_category(i+1)
-                        self.camera.follow(creatures[0])
+                        creatures = self.next_runners()
+                        if not creatures:
+                            running = False
                 elif event.type == QUIT:
                     running = False
             
@@ -207,8 +206,6 @@ class Evolve:
 
 def parseInputs():
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('-m', '--mutate', type=int, default=2,
-                        help='mutation frequency multiplier (defaults to 2)')
     parser.add_argument('-f', '--file', type=str, help='population file')
     parser.add_argument('-t', '--terrain_roughness', type=int, default=20, help='terrain variation in elevation (in percent)')
     parser.add_argument('-l', '--limit_steps', type=int, default=2000, help='max number of steps for each individual trial (defaults to 500)')
@@ -219,7 +216,6 @@ def parseInputs():
 
 if __name__ == "__main__":
     args = parseInputs()
-    args.mutate = max(1, args.mutate)
     args.terrain_roughness = max(0, args.terrain_roughness)
     args.limit_steps = max(50, args.limit_steps)
     

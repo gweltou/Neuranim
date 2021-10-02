@@ -128,7 +128,6 @@ class Camera(queryCallback):
     def set_pole(self, x, y):
         self.draw_pole = True
         self.flag_pos = (x, y)
-        print("pole set", x, y)
     
     
     def updateAABB(self):
