@@ -6,11 +6,12 @@ Apprentissage automatique de la marche pour robots virtuels.
 ## Dépendances
  * Python3
  * Numpy
+ * Matplotlib
  * Pygame
  * Box2D
 
 ## Installation
-`pip3 install pygame`
+`pip3 install numpy matplotlib pygame box2d`
 
 ## Mise en marche
 ### Première étape: Modifier le fichier "parameters.py"
