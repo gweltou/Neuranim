@@ -5,6 +5,7 @@
 import numpy as np
 from Box2D.b2 import contactListener
 from parameters import *
+from creatures import Animatronic
 
 
 
@@ -19,9 +20,18 @@ class nnContactListener(contactListener):
             if isinstance(f1.userData, tuple):	
                 # This fixture is an Animatronic sensor
                 self.sensors[f1.userData[0]][f1.userData[1]] = 1.0
+            elif isinstance(f1.userData, Animatronic):
+                # Detect body touching ground
+                if f1 == f1.userData.body.fixtures[0]:
+                    self.sensors[f1.userData.id][-1] = True
+            
             if isinstance(f2.userData, tuple):
                 # This fixture is an Animatronic sensor
                 self.sensors[f2.userData[0]][f2.userData[1]] = 1.0
+            elif isinstance(f2.userData, Animatronic):
+                # Detect body touching ground
+                if f2 == f2.userData.body.fixtures[0]:
+                    self.sensors[f2.userData.id][-1] = True
     
     def EndContact(self, contact):
         f1, f2 = contact.fixtureA, contact.fixtureB
@@ -29,9 +39,18 @@ class nnContactListener(contactListener):
             if isinstance(f1.userData, tuple):
                 # This fixture is an Animatronic sensor
                 self.sensors[f1.userData[0]][f1.userData[1]] = 0.0
+            elif isinstance(f1.userData, Animatronic):
+                # Detect body touching ground
+                if f1 == f1.userData.body.fixtures[0]:
+                    self.sensors[f1.userData.id][-1] = False
+            
             if isinstance(f2.userData, tuple):
                 # This fixture is an Animatronic sensor
                 self.sensors[f2.userData[0]][f2.userData[1]] = 0.0
+            elif isinstance(f2.userData, Animatronic) and f2.userData.body.fixtures: # Weird
+                # Detect body touching ground
+                if f2 == f2.userData.body.fixtures[0]:
+                    self.sensors[f2.userData.id][-1] = False
     
     def registerSensors(self, id, n):
         """
@@ -39,7 +58,7 @@ class nnContactListener(contactListener):
                 id: Animatronic unique identifier
                 n: number of sensor to register
         """
-        self.sensors[id] = [0.0]*n
+        self.sensors[id] = [0.0]*(n+1)  # Last slot for body touching ground
     
     def unregisterSensors(self, id):
         del self.sensors[id]

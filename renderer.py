@@ -92,6 +92,8 @@ class Camera(queryCallback):
         for b in creature.bodies:
             for f in b.fixtures:
                 color = main_color
+                if b is creature.bodies[0]:
+                    color = tuple([min(255, int(c*1.08)) for c in color])
                 if f.shape.type == 2: # Polygons
                     vertices = [self.world_to_px(f.body.transform * v) for v in f.shape.vertices]
                     pygame.draw.polygon(self.screen, color, vertices)

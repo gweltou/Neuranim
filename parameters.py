@@ -10,3 +10,7 @@ TARGETS = [(-12, 2), (40, 2)]    # Run
 
 
 PLOT_EVOLUTION = True
+
+
+# Fitness score parameters
+SLOUCHING_PENALTY = 0.01
