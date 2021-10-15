@@ -187,7 +187,7 @@ class Evolve:
         self.target = vec2(TARGET)  # vec2(random.choice(TARGETS))
         creature.set_target(self.target.x, self.target.y)
         creature.init_body()
-        self.score_min = 100
+        #self.score_min = 100
         if self.display_mode:
             self.nn_coords = build_nn_coords(creature.nn)
             creature.nn.save_state = True   # Used when displaying nn structure
@@ -204,6 +204,7 @@ class Evolve:
         show_downstream = False
         paused = False
         running = True
+        score = 0
         while running:
         
             #### PyGame ####
@@ -265,7 +266,7 @@ class Evolve:
                         running = False
                             
             if not paused:
-                creature.update(self.world.contactListener.sensors[creature.id], mirror)
+                creature.update(self.world.contactListener.sensors[creature.id][:-1], mirror)
             
             #### PyGame ####
             if self.display_mode:
@@ -334,17 +335,23 @@ class Evolve:
                 continue
             
             self.world.Step(TIME_STEP*self.speed_multiplier, 6, 2)
+            
+            if SLOUCHING_PENALTY != 0:
+                if self.world.contactListener.sensors[creature.id][-1]:
+                    score += SLOUCHING_PENALTY
+            
             steps += 1 * self.speed_multiplier
             if steps >= self.args.limit_steps or not creature.body.awake:
                 # End of trial for this creature
                 steps = 0
-                score = (creature.target - creature.body.position).length
+                score += (creature.target - creature.body.position).length
                 podium.append((score, creature,))
                 creature.destroy()
 
                 if len(self.pool) > 0:
                     # Evaluate next creature in pool
                     creature = self.pop_creature()
+                    score = 0
                 else:
                     # Pool is empty
                     if not BREED:
@@ -368,7 +375,7 @@ class Evolve:
                             self.stats.savePlot(filename, title)
                     print(f"    Generation score: {gen_score}")
                     print(f"    {len(winners)} creatures selected")
-                    print(f"# End of generation {self.generation}")
+                    print(f"# End of generation {self.generation}\n")
                     
                     if self.generation >= args.end_generation:
                         running = False

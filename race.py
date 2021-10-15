@@ -178,7 +178,7 @@ class Evolve:
             
             if not paused:
                 for c in creatures:
-                    c.update(self.world.contactListener.sensors[c.id], mirror)
+                    c.update(self.world.contactListener.sensors[c.id][:-1], mirror)
             
             #### PyGame ####
             self.camera.render()
@@ -208,7 +208,7 @@ def parseInputs():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('-f', '--file', type=str, help='population file')
     parser.add_argument('-t', '--terrain_roughness', type=int, default=20, help='terrain variation in elevation (in percent)')
-    parser.add_argument('-l', '--limit_steps', type=int, default=2000, help='max number of steps for each individual trial (defaults to 500)')
+    parser.add_argument('-l', '--limit_steps', type=int, default=3000, help='max number of steps for each individual trial (defaults to 500)')
     parser.add_argument('-n', '--num-participants', type=int, default=4, help='')
     parser.add_argument('-p', '--pool_size', type=int, default=200, help='size of creature population (defaults to 200)')
     return parser.parse_args()
