@@ -6,7 +6,6 @@ import os.path
 import argparse
 import random
 import re
-import numpy as np
 import pygame
 from pygame.locals import *
 from nn import *
@@ -83,11 +82,19 @@ class Evolve:
             filename = os.path.join(filename, f'gen{highest_gen}.txt')
           
         data = import_generation(filename, self.world)
-        self.pool = data["population"]
+        self.pool += data["population"]
         
         print('Population "{}"'.format(self.pool[0].pop_id))
         print("Layers (input+hidden+output): {}".format(self.pool[0].nn.get_layers()))
         print("{} drones imported".format(len(self.pool)))
+    
+    
+    def load_all(self):
+        for morpho in os.listdir("run"):
+            dname = os.path.join("run", morpho)
+            for pop in os.listdir(dname):
+                fname = os.path.join(dname, pop)
+                self.load_population(fname)
     
     
     def get_path(self, c):
@@ -99,7 +106,7 @@ class Evolve:
         if len(self.pool) == 0:
             return None
         
-        creature = self.pool.pop(random.randrange(len(self.pool)))
+        creature = self.pool.pop(0)
         creature.set_start_position(STARTPOS[0], STARTPOS[1] + self.startpos_elevation)
         # Choose a new target
         creature.set_target(self.target.x, self.target.y)
@@ -117,6 +124,9 @@ class Evolve:
             c.set_start_position(c.start_position.x-i, c.start_position.y)
             c.init_body()
             c.set_category(i+1)
+        pygame.display.set_caption('Neuranim Evolve  --  ' + 
+                    runners[0].pop_id +
+                    f' [{args.file.split(os.path.sep)[-1]}]')
         return runners
     
     
@@ -195,12 +205,11 @@ class Evolve:
                 steps = 0
                 for c in creatures:
                     c.destroy()
-                running = False
 
                 if len(self.pool) > 0:
-                    # Evaluate next creature in pool
-                    #creature = self.pop_creature()
-                    pass
+                    creatures = self.next_runners()
+                else:
+                    running = False
 
 
 
@@ -225,10 +234,10 @@ if __name__ == "__main__":
         print(f"  {k}: {v}")
     
     if args.file:
-        evolve.load_population(args.file)
-        pygame.display.set_caption('Neuranim Evolve  --  ' + 
-                evolve.pool[0].pop_id +
-                f' [{args.file.split(os.path.sep)[-1]}]')
+        if args.file == 'a':
+            evolve.load_all()
+        else:
+            evolve.load_population(args.file)
     
     evolve.mainLoop()
     
