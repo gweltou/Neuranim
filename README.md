@@ -1,5 +1,5 @@
 # Neuranim
-![preview](res/neuranim.gif)
+![preview](res/neuranim2.gif)
 
 Apprentissage automatique de la marche pour robots virtuels.
 
@@ -61,6 +61,23 @@ Activer le mode présentation:
 
 `python3 evolve.py -f genXXX.txt -v`
 
+
+### Mode présentation
+'n'   Sélectionne la prochaine créature
+'m'   Mode miroir (inverse la symétrie des récepteurs)
+'d'   Affiche le réseau neuronal de la créature actuelle
+'f'   Centre l'affichage sur la créature actuelle
+'s'   Slow motion
+'p'   Pause
+'w'   Affiche les connexions montantes ou descendantes du réseau neuronal
+'q' ou Esc    Quitter
+
+
+## Mode course
+
+`python3 race.py -f genXXX.txt`
+
+
 ## Types de mutations
 Chaque exécution de la fonction Animatronic.mutate provoque la mutation de 2 gènes en moyenne.
 Une mutation peut définir une nouvelle valeur (entre -1 et 1) à un gène ou bien le désactiver (valeur définie à 0). Un gène désactivé ne subit plus de mutations et il ne peut donc pas être réactivé. Les désactivations représentent 2% des mutations.
@@ -72,4 +89,5 @@ Une mutation peut définir une nouvelle valeur (entre -1 et 1) à un gène ou bi
  * Cumul du score pour chaque creature
 
 ## Quelques idées:
+ * Curriculum learning
  * Tester réseau neuronal qui s'actualise d'une couche à la fois (pour un RN de x couches intermédiaires, il faudra donc x+1 pas pour le traverser entièrement)
